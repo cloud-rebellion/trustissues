@@ -1,6 +1,12 @@
 # Stage 1: Build frontend
 FROM oven/bun:1-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb AS frontend
 WORKDIR /app/frontend
+ARG VITE_FLARE_DSN
+ARG VITE_FLARE_ENVIRONMENT=production
+ARG VITE_FLARE_RELEASE=development
+ENV VITE_FLARE_DSN=${VITE_FLARE_DSN} \
+    VITE_FLARE_ENVIRONMENT=${VITE_FLARE_ENVIRONMENT} \
+    VITE_FLARE_RELEASE=${VITE_FLARE_RELEASE}
 COPY frontend/package.json frontend/bun.lock* ./
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile

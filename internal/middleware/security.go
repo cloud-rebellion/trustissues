@@ -15,10 +15,11 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		// inline style attributes that no nonce covers; script-src is strict
 		// 'self' (no inline/eval). img-src is 'self' data: only (the app bundles
 		// its own provider icons and loads no remote images), and connect-src is
-		// 'self' (no WebSocket/wss; the SPA talks only to its own origin over
-		// HTTP). Narrowing img-src/connect-src off the previous https:/wss:
-		// wildcards removes a data-exfiltration channel.
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		// 'self' plus the Flare intake origin for browser telemetry (no WebSocket/wss;
+		// the SPA otherwise talks only to its own origin over HTTP). Narrowing
+		// img-src/connect-src off the previous https:/wss: wildcards removes a
+		// data-exfiltration channel.
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://flare.brightinteraction.com; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		// ForwardedProtoHTTPS, not Header.Get: the header is a list, Get reads
 		// only its first line, and an untrusted caller must not be able to assert
 		// the answer. See forwarded.go.

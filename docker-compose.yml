@@ -4,6 +4,9 @@ services:
       context: .
       args:
         - SERVER_VERSION
+        - VITE_FLARE_DSN=${FLARE_DSN:-}
+        - VITE_FLARE_ENVIRONMENT=${FLARE_ENVIRONMENT:-production}
+        - VITE_FLARE_RELEASE=${FLARE_RELEASE:-development}
     container_name: trustissues
     restart: unless-stopped
     # Longer than the server's 20s delivery drain (see WaitForDelivery), so a
