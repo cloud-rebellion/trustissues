@@ -13,6 +13,12 @@ external dependencies.
 
 ## Documentation
 
+In the application, choose **Documentation** in the sidebar. Every signed-in
+role can browse and search the guides, follow section links, open screenshots
+at full size, and print a guide. Help remains available during MFA enrollment.
+The reviewed Markdown and screenshots are embedded in the server binary, so
+the page does not require an external documentation service.
+
 Start with the illustrated **[TrustIssues user guide](docs/USER-GUIDE.md)** for
 sign-in, Personal and shared vaults, adding credentials, client sharing, Proton
 Pass migration and PGP-encrypted exports. It includes step-by-step instructions

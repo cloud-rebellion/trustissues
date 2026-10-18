@@ -1,5 +1,12 @@
 # TrustIssues documentation
 
+Inside TrustIssues, open **Documentation** from the sidebar. Search guides by
+topic, choose a guide and use **On this page** to jump to a section. Select a
+screenshot to open it at full size, or use **Print guide** for a paper/PDF copy.
+Documentation is available to every signed-in role, including client accounts
+and accounts still enrolling in MFA; credential operations keep their existing
+permission and enrollment checks.
+
 Start with the **[illustrated user guide](USER-GUIDE.md)**. It explains the app
 through real tasks and screenshots, including Personal versus shared vaults,
 adding credentials, client sharing, Proton Pass import and PGP export.
