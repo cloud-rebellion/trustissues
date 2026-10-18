@@ -22,7 +22,7 @@ export default function ClientOnboarding() {
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10">
-      <main className="mx-auto max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <main className="mx-auto max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
         <div className="mb-6 flex items-start gap-3">
           <div className="rounded-lg bg-emerald-100 p-2">
             <CheckCircle2 className="h-5 w-5 text-emerald-700" />
@@ -39,7 +39,7 @@ export default function ClientOnboarding() {
         <ol className="space-y-3">
           <li className={stepClass}>
             <div className="flex items-start gap-3">
-              <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-600" />
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-slate-600" />
               <div>
                 <h2 className="text-sm font-semibold text-slate-900">
                   1. {totpRequired ? 'Set up two-factor authentication' : 'Check account security'}
@@ -76,7 +76,7 @@ export default function ClientOnboarding() {
 
           <li className={stepClass}>
             <div className="flex items-start gap-3">
-              <KeyRound className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-600" />
+              <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-slate-600" />
               <div>
                 <h2 className="text-sm font-semibold text-slate-900">
                   3. Create a named extension API key

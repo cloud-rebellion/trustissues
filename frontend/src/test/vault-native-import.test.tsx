@@ -8,12 +8,19 @@ const {
   csvPreviewMock,
   nativeConfirmMock,
   nativePreviewMock,
+  prepareMock,
 } = vi.hoisted(() => ({
   csvConfirmMock: vi.fn(),
   csvPreviewMock: vi.fn(),
   nativeConfirmMock: vi.fn(),
   nativePreviewMock: vi.fn(),
+  prepareMock: vi.fn(),
 }));
+
+vi.mock('@/lib/vault-pgp', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/vault-pgp')>();
+  return { ...actual, prepareVaultImport: prepareMock };
+});
 
 vi.mock('@/lib/vault-types', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/vault-types')>();
@@ -80,6 +87,59 @@ describe('TrustIssues native vault import', () => {
     nativeConfirmMock.mockReset();
     nativePreviewMock.mockReset();
     nativePreviewMock.mockResolvedValue(nativePreview);
+    prepareMock.mockReset();
+    prepareMock.mockImplementation(async (file: File) => ({file, warnings: []}));
+  });
+
+  it('prepares encrypted Proton Pass locally, previews and confirms the same prepared data', async () => {
+    const decrypted = trustIssuesFile();
+    prepareMock.mockResolvedValue({file: decrypted, warnings: ['Proton Pass fixture migration warning']});
+    nativeConfirmMock.mockResolvedValue({imported: 3, collections_created: 2});
+    const user = userEvent.setup();
+    render(<Harness />);
+    const encrypted = new File(['encrypted-fixture'], 'Proton Pass.zip', {type: 'application/zip'});
+    await user.upload(screen.getByLabelText('Choose File'), encrypted);
+    await user.type(screen.getByLabelText('PGP passphrase'), 'export-passphrase');
+    await user.click(screen.getByRole('button', {name: 'Preview Import'}));
+    await screen.findByText(/TrustIssues export version/);
+    expect(prepareMock).toHaveBeenCalledWith(encrypted, expect.objectContaining({passphrase: 'export-passphrase'}), expect.any(AbortSignal), 'auto');
+    expect(nativePreviewMock).toHaveBeenCalledWith(decrypted, expect.any(AbortSignal));
+    expect(screen.getByRole('note')).toHaveTextContent('Proton Pass fixture migration warning');
+    expect(screen.queryByText('DO_NOT_RENDER_SECRET')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Current account password'), 'account-password');
+    await user.click(screen.getByRole('button', {name: 'Import 3 entries'}));
+    await waitFor(() => expect(nativeConfirmMock).toHaveBeenCalledWith(decrypted, 'account-password', expect.any(AbortSignal)));
+    expect(csvConfirmMock).not.toHaveBeenCalled();
+  });
+
+  it('does not call preview or confirm when PGP decryption fails', async () => {
+    prepareMock.mockRejectedValue(new Error('PGP decryption failed'));
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.upload(screen.getByLabelText('Choose File'), new File(['bad-fixture'], 'data.pgp'));
+    await user.type(screen.getByLabelText('PGP passphrase'), 'wrong-passphrase');
+    await user.click(screen.getByRole('button', {name: 'Preview Import'}));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Nothing was imported');
+    expect(nativePreviewMock).not.toHaveBeenCalled();
+    expect(nativeConfirmMock).not.toHaveBeenCalled();
+    expect(csvPreviewMock).not.toHaveBeenCalled();
+  });
+
+  it('cancels PGP preparation on close and ignores the late decrypted result', async () => {
+    let finish!: (result: {file: File; warnings: string[]}) => void;
+    prepareMock.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.upload(screen.getByLabelText('Choose File'), new File(['fixture'], 'data.pgp'));
+    await user.type(screen.getByLabelText('PGP passphrase'), 'fixture-passphrase');
+    await user.click(screen.getByRole('button', {name: 'Preview Import'}));
+    const signal = prepareMock.mock.calls[0][2] as AbortSignal;
+    await user.click(screen.getByRole('button', {name: 'Close import'}));
+    expect(signal.aborted).toBe(true);
+    finish({file: trustIssuesFile(), warnings: []});
+    await user.click(screen.getByRole('button', {name: 'Open import'}));
+    expect(nativePreviewMock).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('PGP passphrase')).not.toBeInTheDocument();
   });
 
   it('previews JSON using counts only and warns about plaintext and disabled rotation', async () => {
@@ -239,7 +299,42 @@ describe('TrustIssues native vault import', () => {
     await user.click(screen.getByRole('button', { name: 'Import 1 entries' }));
     await waitFor(() => expect(csvConfirmMock).toHaveBeenCalledWith([
       expect.objectContaining({ name: 'Example login', value: 'csv-secret' }),
-    ]));
+    ], expect.any(AbortSignal)));
     expect(nativeConfirmMock).not.toHaveBeenCalled();
+  });
+
+  it('renders legacy null preview arrays without crashing and still imports valid rows', async () => {
+    const entry = {name: 'Legacy CSV login', url: '', username: 'fixture', value: 'fixture-secret'};
+    csvPreviewMock.mockResolvedValue({format: 'lastpass', entries: [entry], total: 1, conflicts: null, skipped: null, source_rows: 1});
+    csvConfirmMock.mockResolvedValue({imported: 1});
+    render(<Harness />);
+    const user = userEvent.setup();
+    await user.upload(screen.getByLabelText('Choose File'), new File(['fixture'], 'legacy.csv', {type: 'text/csv'}));
+    await user.click(screen.getByRole('button', {name: 'Preview Import'}));
+    expect(await screen.findByText('Legacy CSV login')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', {name: 'Import 1 entries'}));
+    await waitFor(() => expect(csvConfirmMock).toHaveBeenCalledWith([entry], expect.any(AbortSignal)));
+  });
+
+  it('renders an all-skipped legacy preview with null entries and disables import', async () => {
+    csvPreviewMock.mockResolvedValue({format: 'bitwarden', entries: null, total: 0, conflicts: null,
+      skipped: [{name: 'Skipped card', reason: 'unsupported item'}], source_rows: 1});
+    render(<Harness />);
+    const user = userEvent.setup();
+    await user.upload(screen.getByLabelText('Choose File'), new File(['fixture'], 'legacy.csv', {type: 'text/csv'}));
+    await user.click(screen.getByRole('button', {name: 'Preview Import'}));
+    expect(await screen.findByText('Skipped card')).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Import 0 entries'})).toBeDisabled();
+  });
+
+  it('reports incomplete positive-count preview data instead of crashing or claiming it is empty', async () => {
+    csvPreviewMock.mockResolvedValue({format: 'lastpass', entries: null, total: 2, conflicts: null, skipped: []});
+    render(<Harness />);
+    const user = userEvent.setup();
+    await user.upload(screen.getByLabelText('Choose File'), new File(['fixture'], 'legacy.csv', {type: 'text/csv'}));
+    await user.click(screen.getByRole('button', {name: 'Preview Import'}));
+    expect(await screen.findByRole('alert')).toHaveTextContent('preview was incomplete');
+    expect(csvConfirmMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', {name: /Import \d+ entries/})).not.toBeInTheDocument();
   });
 });

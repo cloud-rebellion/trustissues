@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,58 @@ import (
 	"github.com/bright-interaction/trustissues/internal/db"
 	"github.com/bright-interaction/trustissues/internal/middleware"
 )
+
+// Exercise the actual detail JSON, not just the Go value: omitempty used to
+// erase zero here and leave the browser waiting forever for an empty vault.
+func TestCollectionDetailCountCanConfirmEmptyAndDetectLaterEntries(t *testing.T) {
+	vh, queries := newCollectionAuthzEnv(t)
+	boss := mustUser(t, queries, "detail-count@example.com", "user", "")
+	mustCollection(t, queries, "detail-count", boss, map[string]string{boss: collRoleManager})
+	ch := NewCollectionHandler(queries, vh)
+	getCount := func() int64 {
+		t.Helper()
+		w := httptest.NewRecorder()
+		ch.Get(w, liveCollectionRequest(t, http.MethodGet, "/api/collections/detail-count", boss, "detail-count", nil))
+		if w.Code != http.StatusOK {
+			t.Fatalf("detail status %d: %s", w.Code, w.Body.String())
+		}
+		var body struct {
+			EntryCount *int64 `json:"entry_count"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil || body.EntryCount == nil {
+			t.Fatalf("detail must include a measured count, including zero: %s", w.Body.String())
+		}
+		return *body.EntryCount
+	}
+	if count := getCount(); count != 0 {
+		t.Fatalf("empty collection count = %d", count)
+	}
+	// The list has no measured count; never fabricate an empty count there.
+	list := httptest.NewRecorder()
+	ch.List(list, liveCollectionRequest(t, http.MethodGet, "/api/collections", boss, "", nil))
+	var rows []map[string]json.RawMessage
+	if list.Code != http.StatusOK || json.Unmarshal(list.Body.Bytes(), &rows) != nil || len(rows) != 1 {
+		t.Fatalf("list failed: %d %s", list.Code, list.Body.String())
+	}
+	if _, present := rows[0]["entry_count"]; present {
+		t.Fatal("list claimed an unmeasured count")
+	}
+	mustEntry(t, vh, queries, "count-entry", boss, "Disposable", "fixture-value")
+	placeInCollection(t, queries, "count-entry", "detail-count")
+	stale := httptest.NewRecorder()
+	ch.Delete(stale, deleteCollectionRequest("detail-count", boss, "0"))
+	if stale.Code != http.StatusConflict {
+		t.Fatalf("stale empty confirmation must refuse new entries: %d", stale.Code)
+	}
+	if count := getCount(); count != 1 {
+		t.Fatalf("populated collection count = %d", count)
+	}
+	confirmed := httptest.NewRecorder()
+	ch.Delete(confirmed, deleteCollectionRequest("detail-count", boss, "1"))
+	if confirmed.Code != http.StatusNoContent {
+		t.Fatalf("confirmed count should allow deletion: %d %s", confirmed.Code, confirmed.Body.String())
+	}
+}
 
 // deleteCollectionRequest builds an authenticated DELETE /api/collections/{id}
 // request, optionally carrying ?entry_count=. rawEntryCount lets a case send a

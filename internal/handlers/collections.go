@@ -148,9 +148,11 @@ type collectionResponse struct {
 	PrivateAccessPolicy privateaccess.Policy `json:"private_access_policy"`
 	Role                string               `json:"role,omitempty"`
 	MemberCount         int                  `json:"member_count,omitempty"`
-	EntryCount          int64                `json:"entry_count,omitempty"`
-	CreatedAt           *string              `json:"created_at"`
-	UpdatedAt           *string              `json:"updated_at"`
+	// Only the detail response has a measured count. A pointer preserves an
+	// explicit zero without presenting unmeasured list/create counts as empty.
+	EntryCount *int64  `json:"entry_count,omitempty"`
+	CreatedAt  *string `json:"created_at"`
+	UpdatedAt  *string `json:"updated_at"`
 }
 
 // List handles GET /api/collections. Admins see every collection; others see
@@ -320,7 +322,7 @@ func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, collectionResponse{
 		ID: c.ID, Name: c.Name, Description: c.Description,
-		PrivateAccessPolicy: privateaccess.Policy(c.PrivateAccessPolicy), Role: role, EntryCount: entryCount,
+		PrivateAccessPolicy: privateaccess.Policy(c.PrivateAccessPolicy), Role: role, EntryCount: &entryCount,
 		CreatedAt: nullTimePtr(c.CreatedAt), UpdatedAt: nullTimePtr(c.UpdatedAt),
 	})
 }

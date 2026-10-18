@@ -233,9 +233,11 @@ Backup rules (the short version):
 - An in-process `trustissues backup` subcommand and off-host replication are
   still deferred (`DEFERRED.md` section (d)).
 
-Database snapshots are for disaster recovery. The native vault export used to
-move data between Trustissues instances is deliberately plaintext and needs a
-different handling procedure; see `docs/PORTABILITY.md`.
+Database snapshots are for disaster recovery. Native vault JSON contains
+plaintext secrets; the export dialog can encrypt it with PGP before download.
+Import also accepts Proton Pass CSV, JSON and encrypted ZIP/PGP exports. See
+[`PGP import and export`](docs/PGP-IMPORT-EXPORT.md) and
+[`Vault portability`](docs/PORTABILITY.md).
 
 ### File permissions
 

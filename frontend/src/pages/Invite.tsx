@@ -67,7 +67,7 @@ export default function Invite() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               required
-              className="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm tracking-widest outline-none transition-colors focus:border-slate-400 focus:ring-0"
+              className="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm tracking-widest outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
               placeholder="ABC123"
               autoFocus={!code}
             />
@@ -84,7 +84,7 @@ export default function Invite() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={12}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-slate-400 focus:ring-0"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
               placeholder="At least 12 characters"
               autoFocus={!!code}
             />

@@ -3,6 +3,8 @@ import { AlertTriangle, Download, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ApiError } from '@/lib/api';
 import { vaultApi } from '@/lib/vault-types';
+import PgpFields, { EMPTY_PGP_OPTIONS } from './PgpFields';
+import { encryptVaultExport } from '@/lib/vault-pgp';
 
 interface VaultExportModalProps {
   isOpen: boolean;
@@ -76,12 +78,18 @@ export default function VaultExportModal({
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [format, setFormat] = useState<'json' | 'pgp'>('json');
+  const [pgp, setPgp] = useState(EMPTY_PGP_OPTIONS);
+  const [confirmation, setConfirmation] = useState('');
   const activeRequest = useRef<AbortController | null>(null);
 
   function clearSensitiveState() {
     setPassword('');
     setError(null);
     setIsExporting(false);
+    setPgp(EMPTY_PGP_OPTIONS);
+    setConfirmation('');
+    setFormat('json');
   }
 
   function close() {
@@ -106,12 +114,21 @@ export default function VaultExportModal({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!password || isExporting) return;
+    if (format === 'pgp' && (
+      pgp.mode === 'key' ? !pgp.key : pgp.passphrase.length < 12 || pgp.passphrase !== confirmation
+    )) {
+      setError('Supply a public key or matching PGP passphrases of at least 12 characters.');
+      return;
+    }
 
     const submittedPassword = password;
+    const protection = { ...pgp };
     const controller = new AbortController();
     activeRequest.current?.abort();
     activeRequest.current = controller;
     setPassword('');
+    setPgp(EMPTY_PGP_OPTIONS);
+    setConfirmation('');
     setError(null);
     setIsExporting(true);
 
@@ -119,7 +136,12 @@ export default function VaultExportModal({
       const result = await vaultApi.export(submittedPassword, controller.signal);
       if (controller.signal.aborted || activeRequest.current !== controller) return;
 
-      download(result.blob, exportFilename(result.contentDisposition));
+      const blob = format === 'pgp'
+        ? await encryptVaultExport(result.blob, protection, controller.signal)
+        : result.blob;
+      if (controller.signal.aborted || activeRequest.current !== controller) return;
+      const filename = exportFilename(result.contentDisposition);
+      download(blob, format === 'pgp' ? `${filename}.asc` : filename);
       activeRequest.current = null;
       setIsExporting(false);
       toast.success('Vault export downloaded');
@@ -148,7 +170,7 @@ export default function VaultExportModal({
         aria-modal="true"
         aria-labelledby="vault-export-title"
         aria-describedby="vault-export-warning"
-        className="relative z-10 w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl"
+        className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-xl"
       >
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div>
@@ -180,11 +202,12 @@ export default function VaultExportModal({
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div>
               <p className="text-sm font-semibold text-amber-900">
-                The downloaded file contains plaintext secrets.
+                {format === 'pgp' ? 'The downloaded file will be PGP-encrypted.' : 'The downloaded file contains plaintext secrets.'}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-amber-800">
-                Anyone who can open it can read every exported password. Store it
-                securely and delete it when you are finished.
+                {format === 'pgp'
+                  ? 'Encryption happens in your browser before download. Keep the decryption key or passphrase safe; TrustIssues cannot recover it.'
+                  : 'Anyone who can open it can read every exported password. Store it securely and delete it when you are finished.'}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-amber-800">
                 An export made on the public URL contains only personal and
@@ -195,6 +218,25 @@ export default function VaultExportModal({
               </p>
             </div>
           </div>
+
+          <label className="block space-y-1 text-sm font-medium text-slate-700">
+            <span>Export format</span>
+            <select value={format} disabled={isExporting}
+              onChange={(event) => { setFormat(event.target.value as 'json' | 'pgp'); setPgp(EMPTY_PGP_OPTIONS); setConfirmation(''); setError(null); }}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+              <option value="json">TrustIssues JSON (plaintext)</option>
+              <option value="pgp">PGP-encrypted TrustIssues JSON (.asc)</option>
+            </select>
+          </label>
+          {format === 'pgp' && <>
+            <PgpFields direction="export" value={pgp} onChange={setPgp} disabled={isExporting} />
+            {pgp.mode === 'passphrase' && <label className="block space-y-1 text-sm text-slate-700">
+              <span>Confirm PGP passphrase</span>
+              <input type="password" required minLength={12} autoComplete="off" value={confirmation} disabled={isExporting}
+                onChange={(event) => setConfirmation(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </label>}
+          </>}
 
           <div>
             <label
@@ -215,7 +257,7 @@ export default function VaultExportModal({
                 if (error) setError(null);
               }}
               disabled={isExporting}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-hidden focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
             />
           </div>
 

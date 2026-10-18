@@ -81,7 +81,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-slate-400 focus:ring-0';
+  'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0';
 const labelClass = 'mb-1.5 block text-sm font-medium text-slate-700';
 const cardClass = 'rounded-xl border border-slate-200 bg-white p-6';
 const primaryButtonClass =
@@ -549,7 +549,7 @@ function PolicyTab() {
             onChange={(e) =>
               setForm({ ...form, require_totp: e.target.checked })
             }
-            className="h-4 w-4 rounded border-slate-300"
+            className="h-4 w-4 rounded-sm border-slate-300"
           />
           Require two-factor authentication for all users
         </label>
@@ -798,7 +798,7 @@ function EmailTab() {
             type="checkbox"
             checked={form.use_tls}
             onChange={(e) => setForm({ ...form, use_tls: e.target.checked })}
-            className="h-4 w-4 rounded border-slate-300"
+            className="h-4 w-4 rounded-sm border-slate-300"
           />
           Use TLS
         </label>
@@ -1049,7 +1049,7 @@ function ChannelsTab() {
                 >
                   <input
                     type="checkbox"
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                    className="mt-0.5 h-4 w-4 rounded-sm border-slate-300"
                     checked={events.includes(e)}
                     onChange={() => toggleEvent(e)}
                   />
@@ -1739,7 +1739,7 @@ export function ApiKeysTab() {
                       type="button"
                       onClick={() => deleteMutation.mutate(k.id)}
                       disabled={deleteMutation.isPending}
-                      className="flex-shrink-0 text-slate-400 transition-colors hover:text-red-600 disabled:opacity-50"
+                      className="shrink-0 text-slate-400 transition-colors hover:text-red-600 disabled:opacity-50"
                       title="Revoke key"
                       aria-label={`Revoke ${k.name}`}
                     >
@@ -2018,11 +2018,11 @@ function AITab() {
         </h2>
         <p className="mb-3 text-sm text-slate-500">
           Point your Anthropic or OpenAI SDK base URL at{' '}
-          <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs text-slate-700">
+          <code className="rounded-sm bg-slate-100 px-1 py-0.5 font-mono text-xs text-slate-700">
             {config.gateway_base_url}/anthropic
           </code>{' '}
           or{' '}
-          <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs text-slate-700">
+          <code className="rounded-sm bg-slate-100 px-1 py-0.5 font-mono text-xs text-slate-700">
             {config.gateway_base_url}/openai
           </code>
           , and authenticate with an API key (header X-API-Key). The team key is

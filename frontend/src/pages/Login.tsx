@@ -98,7 +98,7 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-slate-400 focus:ring-0"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
               placeholder="admin@example.com"
             />
           </div>
@@ -117,7 +117,7 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-slate-400 focus:ring-0"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
               placeholder="Enter your password"
             />
           </div>
@@ -138,7 +138,7 @@ export default function Login() {
                 value={totpCode}
                 onChange={(e) => setTotpCode(e.target.value)}
                 required
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm tracking-widest outline-none transition-colors focus:border-slate-400 focus:ring-0"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm tracking-widest outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
                 placeholder="000000"
                 maxLength={8}
                 autoFocus

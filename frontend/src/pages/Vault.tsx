@@ -128,7 +128,7 @@ function CopyButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       className={clsx(
-        'rounded p-1 transition-all',
+        'rounded-sm p-1 transition-all',
         copied ? 'text-emerald-500' : 'text-slate-400 hover:text-slate-600'
       )}
       title="Copy"
@@ -242,7 +242,7 @@ function CustomFieldsEditor({
                   value={field.label}
                   onChange={(e) => updateField(index, { label: e.target.value })}
                   placeholder="Label"
-                  className="w-1/3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                  className="w-1/3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                 />
                 <div className="relative flex-1">
                   <input
@@ -251,7 +251,7 @@ function CustomFieldsEditor({
                     onChange={(e) => updateField(index, { value: e.target.value })}
                     placeholder="Value"
                     className={clsx(
-                      'w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-3 text-sm outline-none focus:border-slate-400',
+                      'w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-3 text-sm outline-hidden focus:border-slate-400',
                       field.secret ? 'pr-9 font-mono' : 'pr-3'
                     )}
                   />
@@ -259,7 +259,7 @@ function CustomFieldsEditor({
                     <button
                       type="button"
                       onClick={() => toggleShown(index)}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-sm p-1 text-slate-400 hover:text-slate-600"
                       title={visible ? 'Hide value' : 'Show value'}
                     >
                       {visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -327,14 +327,14 @@ function CustomFieldsDisplay({ fields }: { fields: CustomField[] }) {
         return (
           <div key={index} className="flex items-center gap-2 text-xs">
             <span
-              className="w-1/4 min-w-[72px] flex-shrink-0 truncate font-medium text-slate-500"
+              className="w-1/4 min-w-[72px] shrink-0 truncate font-medium text-slate-500"
               title={field.label}
             >
               {field.label}
             </span>
             <div
               className={
-                'flex-1 break-all rounded px-2 py-1 font-mono ' +
+                'flex-1 break-all rounded-sm px-2 py-1 font-mono ' +
                 (field.withheld ? 'bg-amber-50 text-amber-700' : 'bg-white text-slate-700')
               }
               title={
@@ -348,7 +348,7 @@ function CustomFieldsDisplay({ fields }: { fields: CustomField[] }) {
             {field.secret && !field.withheld && (
               <button
                 onClick={() => toggleShown(index)}
-                className="rounded p-1 text-slate-400 hover:text-slate-600"
+                className="rounded-sm p-1 text-slate-400 hover:text-slate-600"
                 title={visible ? 'Hide' : 'Reveal'}
               >
                 {visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -399,7 +399,7 @@ function IdentityAuditModal({ identity, onClose }: { identity: ServiceIdentity; 
             <ScrollText className="h-4 w-4 text-slate-500" />
             <h3 className="text-sm font-semibold text-slate-900">Audit trail: {identity.name}</h3>
           </div>
-          <button onClick={onClose} className="rounded p-1 text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="rounded-sm p-1 text-slate-400 hover:text-slate-600">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -417,7 +417,7 @@ function IdentityAuditModal({ identity, onClose }: { identity: ServiceIdentity; 
                   <div className="flex items-center justify-between">
                     <span
                       className={clsx(
-                        'rounded px-1.5 py-0.5 font-medium',
+                        'rounded-sm px-1.5 py-0.5 font-medium',
                         e.error ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-700'
                       )}
                     >
@@ -548,22 +548,22 @@ function ServiceIdentitiesCard() {
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-900">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-900">
             <ShieldCheck className="h-5 w-5 text-white" />
           </div>
           <div>
             <h2 className="text-sm font-semibold text-slate-900">Service identities</h2>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-600">
               Machine credentials that fetch a scoped subset of vault secrets at boot. A service presents its key to{' '}
-              <code className="rounded bg-slate-100 px-1 font-mono text-[11px] text-slate-700">/api/service-identities/me/secrets</code>{' '}
+              <code className="rounded-sm bg-slate-100 px-1 font-mono text-[11px] text-slate-700">/api/service-identities/me/secrets</code>{' '}
               and receives only the secrets you allow. Keys start with{' '}
-              <code className="rounded bg-slate-100 px-1 font-mono text-[11px] text-slate-700">sk_</code> and are shown once.
+              <code className="rounded-sm bg-slate-100 px-1 font-mono text-[11px] text-slate-700">sk_</code> and are shown once.
             </p>
           </div>
         </div>
         <button
           onClick={() => setShowMint((v) => !v)}
-          className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
         >
           <Plus className="h-3.5 w-3.5" /> Mint identity
         </button>
@@ -584,7 +584,7 @@ function ServiceIdentitiesCard() {
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="ci-deployer"
-                className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-900 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-900 focus:outline-hidden"
               />
             </div>
             <div>
@@ -595,7 +595,7 @@ function ServiceIdentitiesCard() {
                 value={form.expires_in_days}
                 onChange={(e) => setForm((f) => ({ ...f, expires_in_days: e.target.value }))}
                 placeholder="never"
-                className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-900 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-900 focus:outline-hidden"
               />
             </div>
           </div>
@@ -605,7 +605,7 @@ function ServiceIdentitiesCard() {
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="What boots with this identity"
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-900 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-900 focus:outline-hidden"
             />
           </div>
           <div>
@@ -642,7 +642,7 @@ function ServiceIdentitiesCard() {
                   }
                 }}
                 placeholder="Add a secret name not yet in the vault"
-                className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-900 focus:outline-none"
+                className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-900 focus:outline-hidden"
               />
               <button
                 type="button"
@@ -723,7 +723,7 @@ function ServiceIdentitiesCard() {
                         {s.description && <div className="text-xs text-slate-400">{s.description}</div>}
                       </td>
                       <td className="py-2.5 pr-3">
-                        <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
+                        <code className="rounded-sm bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
                           sk_{s.key_prefix}…
                         </code>
                       </td>
@@ -742,7 +742,7 @@ function ServiceIdentitiesCard() {
                           <button
                             onClick={() => setAuditFor(s)}
                             title="Audit trail"
-                            className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                            className="rounded-sm p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                           >
                             <ScrollText className="h-4 w-4" />
                           </button>
@@ -751,7 +751,7 @@ function ServiceIdentitiesCard() {
                               onClick={() => revokeMutation.mutate(s.id)}
                               disabled={revokeMutation.isPending}
                               title="Revoke (key stops working immediately)"
-                              className="rounded p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"
+                              className="rounded-sm p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"
                             >
                               <Ban className="h-4 w-4" />
                             </button>
@@ -761,13 +761,13 @@ function ServiceIdentitiesCard() {
                               <button
                                 onClick={() => deleteMutation.mutate(s.id)}
                                 disabled={deleteMutation.isPending}
-                                className="rounded bg-rose-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+                                className="rounded-sm bg-rose-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-rose-700 disabled:opacity-50"
                               >
                                 Confirm
                               </button>
                               <button
                                 onClick={() => setConfirmDelete(null)}
-                                className="rounded px-1.5 py-1 text-[11px] text-slate-500 hover:text-slate-700"
+                                className="rounded-sm px-1.5 py-1 text-[11px] text-slate-500 hover:text-slate-700"
                               >
                                 Cancel
                               </button>
@@ -776,7 +776,7 @@ function ServiceIdentitiesCard() {
                             <button
                               onClick={() => setConfirmDelete(s.id)}
                               title="Delete permanently"
-                              className="rounded p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                              className="rounded-sm p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -809,7 +809,7 @@ function ServiceIdentitiesCard() {
               <button
                 onClick={copyKey}
                 className={clsx(
-                  'flex flex-shrink-0 items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors',
+                  'flex shrink-0 items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] font-medium transition-colors',
                   keyCopied ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-slate-200 hover:bg-white/20'
                 )}
               >
@@ -818,7 +818,7 @@ function ServiceIdentitiesCard() {
               </button>
             </div>
             <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
                 Allowed secrets: <span className="font-mono">{mintedKey.allowed_secrets.join(', ')}</span>
               </span>
@@ -888,7 +888,7 @@ function PendingInvitesCard() {
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-amber-100">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
           <UserPlus className="h-4 w-4 text-amber-700" />
         </div>
         <div className="min-w-0 flex-1">
@@ -915,12 +915,12 @@ function PendingInvitesCard() {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <Folder className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                      <Folder className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                       <span className="truncate text-sm font-medium text-slate-900">
                         {invite.name}
                       </span>
                       <span
-                        className="flex-shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                        className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
                         title={`You are being offered the ${invite.role} role`}
                       >
                         {invite.role}
@@ -934,7 +934,7 @@ function PendingInvitesCard() {
                       {invite.invited_at ? ` · ${timeAgo(invite.invited_at)}` : ''}
                     </p>
                   </div>
-                  <div className="flex flex-shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
                       onClick={() => acceptMutation.mutate(invite.collection_id)}
                       disabled={busy}
@@ -1022,9 +1022,25 @@ function CollectionManageModal({
   const {
     data: freshCollection,
     error: collectionDetailError,
+    isFetching: checkingCollection,
+    refetch: retryCollectionCheck,
   } = useQuery<Collection>({
     queryKey: queryKeys.collections.detail(collection.id),
-    queryFn: () => api.collections.get(collection.id),
+    queryFn: async ({ signal }) => {
+      const result = await api.collections.get(
+        collection.id,
+        AbortSignal.any([signal, AbortSignal.timeout(10_000)])
+      );
+      if (
+        typeof result.entry_count !== 'number' ||
+        !Number.isSafeInteger(result.entry_count) ||
+        result.entry_count < 0
+      ) {
+        throw new Error('The credential count could not be verified.');
+      }
+      return result;
+    },
+    retry: false,
   });
   const displayedEntryCount = freshCollection?.entry_count;
   const currentPolicy = normalizeCollectionPrivateAccessPolicy(
@@ -1148,11 +1164,11 @@ function CollectionManageModal({
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-slate-500" />
             <h3 className="text-sm font-semibold text-slate-900">
-              Manage collection: {collection.name}
+              Manage vault: {collection.name}
             </h3>
             <CollectionAccessBadge policy={collection.private_access_policy} />
           </div>
-          <button onClick={onClose} className="rounded p-1 text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="rounded-sm p-1 text-slate-400 hover:text-slate-600">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1173,6 +1189,14 @@ function CollectionManageModal({
             {collectionDetailError && (
               <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-700">
                 {loadErrorMessage(collectionDetailError)}
+                <button
+                  type="button"
+                  onClick={() => void retryCollectionCheck()}
+                  disabled={checkingCollection}
+                  className="ml-2 font-semibold underline disabled:opacity-50"
+                >
+                  Retry contents check
+                </button>
               </div>
             )}
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1182,7 +1206,7 @@ function CollectionManageModal({
                   value={details.name}
                   onChange={(e) => setDetails((d) => ({ ...d, name: e.target.value }))}
                   required
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                 />
               </div>
               <div>
@@ -1191,7 +1215,7 @@ function CollectionManageModal({
                   value={details.description}
                   onChange={(e) => setDetails((d) => ({ ...d, description: e.target.value }))}
                   placeholder="Optional"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                 />
               </div>
             </div>
@@ -1213,7 +1237,7 @@ function CollectionManageModal({
                 your administrator for the exact address if needed.
               </p>
             )}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <button
                 type="submit"
                 disabled={
@@ -1232,13 +1256,17 @@ function CollectionManageModal({
                 Save details
               </button>
               {confirmDelete ? (
-                <span className="flex items-center gap-2">
+                <span className="flex flex-wrap items-center justify-end gap-2">
                   <span className="text-xs text-slate-500">
-                    {typeof displayedEntryCount === 'number'
-                      ? displayedEntryCount > 0
-                        ? `Delete this collection and its ${displayedEntryCount} secret${displayedEntryCount === 1 ? '' : 's'}?`
-                        : 'Delete this empty collection?'
-                      : 'Checking collection contents...'}
+                    {collectionDetailError
+                      ? 'Contents could not be checked. Retry before deleting.'
+                      : checkingCollection
+                        ? 'Checking vault contents...'
+                        : typeof displayedEntryCount === 'number'
+                          ? displayedEntryCount > 0
+                            ? `Delete this vault and its ${displayedEntryCount} credential${displayedEntryCount === 1 ? '' : 's'}? This cannot be undone.`
+                            : 'Delete this empty vault?'
+                          : 'Contents have not been verified.'}
                   </span>
                   <button
                     type="button"
@@ -1246,6 +1274,8 @@ function CollectionManageModal({
                     disabled={
                       deleteCollectionMutation.isPending ||
                       typeof displayedEntryCount !== 'number' ||
+                      Boolean(collectionDetailError) ||
+                      checkingCollection ||
                       collectionActionsBlocked
                     }
                     className="rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-50"
@@ -1264,11 +1294,11 @@ function CollectionManageModal({
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(true)}
-                  disabled={collectionActionsBlocked || Boolean(collectionDetailError)}
+                  disabled={collectionActionsBlocked}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-rose-50 hover:text-rose-600"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  Delete collection
+                  Delete vault
                 </button>
               )}
             </div>
@@ -1305,7 +1335,7 @@ function CollectionManageModal({
                         </p>
                         {m.pending && (
                           <span
-                            className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700"
                             title="Invited but has not accepted yet. No access to this collection until they do."
                           >
                             <Clock className="h-3 w-3" />
@@ -1332,7 +1362,7 @@ function CollectionManageModal({
                           !m.email ||
                           collectionActionsBlocked
                         }
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-slate-400 disabled:opacity-50"
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs outline-hidden focus:border-slate-400 disabled:opacity-50"
                       >
                         {COLLECTION_ROLES.map((r) => (
                           <option key={r} value={r}>
@@ -1391,13 +1421,13 @@ function CollectionManageModal({
                 onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="teammate@example.com"
                 disabled={collectionActionsBlocked || Boolean(membersError)}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
               />
               <select
                 value={addForm.role}
                 onChange={(e) => setAddForm((f) => ({ ...f, role: e.target.value as CollectionRole }))}
                 disabled={collectionActionsBlocked || Boolean(membersError)}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-slate-400"
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm outline-hidden focus:border-slate-400"
               >
                 {COLLECTION_ROLES.map((r) => (
                   <option key={r} value={r}>
@@ -2074,10 +2104,20 @@ export default function Vault() {
   const createCollectionMutation = useMutation({
     mutationFn: (data: Parameters<typeof api.collections.create>[0]) =>
       api.collections.create(data),
-    onSuccess: () => {
-      toast.success('Collection created');
+    onSuccess: (created) => {
+      toast.success('Vault created. Add your first credential.');
       setShowNewCollection(false);
       setNewCollection(BLANK_NEW_COLLECTION);
+      queryClient.setQueryData<Collection[]>(queryKeys.collections.list(), (current = []) =>
+        [...current.filter((item) => item.id !== created.id), created]
+      );
+      setCollectionFilter(created.id);
+      // Creating a vault must not discard or move an existing credential draft.
+      if (vaultUnlocked && !showAddSecret) {
+        setNewSecret({ ...BLANK_NEW_SECRET, collection_id: created.id });
+        setNewCustomFields([]);
+        setShowAddSecret(true);
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.collections.all });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -2152,6 +2192,25 @@ export default function Vault() {
     collectionFilter !== 'all' && collectionFilter !== 'personal'
       ? collectionById(collectionFilter)
       : undefined;
+  const selectedVaultName = selectedFilterCollection?.name ?? 'Personal';
+  const canAddToSelectedVault =
+    (collectionFilter === 'all' || collectionFilter === 'personal' ||
+      writableCollections.some((item) => item.id === collectionFilter)) &&
+    !collectionsError &&
+    (!selectedFilterCollection ||
+      normalizeCollectionPrivateAccessPolicy(selectedFilterCollection.private_access_policy) === 'standard' ||
+      isPrivateIngress);
+
+  function toggleAddCredential() {
+    // Always seed the destination from the current selection when opening.
+    // Preserve it while the user edits; switching filters must not move a draft.
+    setNewSecret({
+      ...BLANK_NEW_SECRET,
+      collection_id: selectedFilterCollection?.id ?? '',
+    });
+    setNewCustomFields([]);
+    setShowAddSecret(!showAddSecret);
+  }
   const requestedManageCollection = manageCollectionId
     ? collectionById(manageCollectionId)
     : undefined;
@@ -2261,7 +2320,7 @@ export default function Vault() {
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Folder className="h-4 w-4 text-slate-500" />
-              <h3 className="text-sm font-semibold text-slate-900">Collections</h3>
+              <h3 className="text-sm font-semibold text-slate-900">Your vaults</h3>
               {ingressQuery.isSuccess && (
                 <span
                   className={clsx(
@@ -2331,7 +2390,7 @@ export default function Vault() {
                 className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 <FolderPlus className="h-3.5 w-3.5" />
-                New collection
+                New vault
               </button>
             </div>
           </div>
@@ -2393,6 +2452,16 @@ export default function Vault() {
               );
             })}
           </div>
+          <p className="mt-3 text-xs leading-5 text-slate-500">
+            Personal is your built-in vault for credentials outside shared vaults.
+            Choose a vault, unlock, then select Add credential. Use New vault to
+            group credentials for a client or team; invite people from Manage.
+          </p>
+          {selectedFilterCollection?.role === 'viewer' && (
+            <p className="mt-2 text-xs text-slate-500">
+              You have read-only access to this vault. An editor or manager can add credentials.
+            </p>
+          )}
         </div>
 
         {/* Unlock / Lock bar */}
@@ -2406,7 +2475,8 @@ export default function Vault() {
                 Vault is locked
               </h3>
               <p className="mb-4 text-xs text-slate-500">
-                Enter your password to unlock and view encrypted secrets.
+                Enter your TrustIssues account password to view or add credentials.
+                {collectionFilter !== 'all' && ` Selected vault: ${selectedVaultName}.`}
               </p>
               <form
                 onSubmit={(e) => {
@@ -2421,7 +2491,7 @@ export default function Vault() {
                   onChange={(e) => setVaultPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
-                  className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                  className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                 />
                 <button
                   type="submit"
@@ -2495,22 +2565,17 @@ export default function Vault() {
               <div className="flex items-center gap-2">
                 <Key className="h-4 w-4 text-slate-500" />
                 <h3 className="text-sm font-semibold text-slate-900">
-                  Secrets
+                  Credentials
                 </h3>
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
-                    if (showAddSecret) {
-                      setNewSecret(BLANK_NEW_SECRET);
-                      setNewCustomFields([]);
-                    }
-                    setShowAddSecret(!showAddSecret);
-                  }}
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  onClick={toggleAddCredential}
+                  disabled={!canAddToSelectedVault && !showAddSecret}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Add secret
+                  {showAddSecret ? 'Close credential form' : 'Add credential'}
                 </button>
                 <button
                   onClick={() => setShowImportModal(true)}
@@ -2547,8 +2612,12 @@ export default function Vault() {
                     custom_fields: cleanCustomFields(newCustomFields),
                   });
                 }}
+                aria-label="Add credential"
                 className="mb-4 space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-4"
               >
+                <p className="text-sm font-medium text-slate-700">
+                  Add to {collectionById(newSecret.collection_id)?.name ?? 'Personal'}
+                </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-xs font-medium text-slate-600">
@@ -2560,7 +2629,7 @@ export default function Vault() {
                       onChange={(e) => setNewSecret({ ...newSecret, name: e.target.value })}
                       placeholder="e.g. DB_PASSWORD"
                       required
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                     />
                   </div>
                   <div>
@@ -2570,7 +2639,7 @@ export default function Vault() {
                     <select
                       value={newSecret.category}
                       onChange={(e) => setNewSecret({ ...newSecret, category: e.target.value })}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                     >
                       <option value="">None</option>
                       <option value="login">Login</option>
@@ -2584,13 +2653,14 @@ export default function Vault() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">
-                      Collection
+                    <label htmlFor="new-credential-vault" className="mb-1 block text-xs font-medium text-slate-600">
+                      Vault
                     </label>
                     <select
+                      id="new-credential-vault"
                       value={newSecret.collection_id}
                       onChange={(e) => setNewSecret({ ...newSecret, collection_id: e.target.value })}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                     >
                       <option value="">Personal</option>
                       {writableCollections.map((c) => (
@@ -2611,7 +2681,7 @@ export default function Vault() {
                       value={newSecret.url}
                       onChange={(e) => setNewSecret({ ...newSecret, url: e.target.value })}
                       placeholder="e.g. https://github.com"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                     />
                   </div>
                   <div>
@@ -2623,7 +2693,7 @@ export default function Vault() {
                       value={newSecret.alias_url}
                       onChange={(e) => setNewSecret({ ...newSecret, alias_url: e.target.value })}
                       placeholder="e.g. https://dev.github.com"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                     />
                   </div>
                 </div>
@@ -2636,7 +2706,7 @@ export default function Vault() {
                     value={newSecret.username}
                     onChange={(e) => setNewSecret({ ...newSecret, username: e.target.value })}
                     placeholder="e.g. admin@example.com"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                   />
                 </div>
                 <div>
@@ -2661,7 +2731,7 @@ export default function Vault() {
                     value={newSecret.notes}
                     onChange={(e) => setNewSecret({ ...newSecret, notes: e.target.value })}
                     placeholder="Optional description"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                   />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -2675,7 +2745,7 @@ export default function Vault() {
                       onChange={(e) => setNewSecret({ ...newSecret, rotation_interval_days: e.target.value })}
                       placeholder="e.g. 90"
                       min="1"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                     />
                   </div>
                   <div>
@@ -2686,7 +2756,7 @@ export default function Vault() {
                       type="date"
                       value={newSecret.expires_at}
                       onChange={(e) => setNewSecret({ ...newSecret, expires_at: e.target.value })}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                     />
                   </div>
                 </div>
@@ -2706,7 +2776,7 @@ export default function Vault() {
                     ) : (
                       <Plus className="h-3.5 w-3.5" />
                     )}
-                    Add secret
+                    Save credential
                   </button>
                   <button
                     type="button"
@@ -2779,7 +2849,7 @@ export default function Vault() {
                               value={editForm.name}
                               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                               required
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                             />
                           </div>
                           <div>
@@ -2787,7 +2857,7 @@ export default function Vault() {
                             <select
                               value={editForm.category}
                               onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                             >
                               <option value="">None</option>
                               <option value="login">Login</option>
@@ -2812,7 +2882,7 @@ export default function Vault() {
                               moveToCollectionMutation.mutate({ id: entry.id, collectionId: next });
                             }}
                             disabled={moveToCollectionMutation.isPending}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400 disabled:opacity-50"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400 disabled:opacity-50"
                           >
                             <option value="">Personal</option>
                             {writableCollections.map((c) => (
@@ -2838,7 +2908,7 @@ export default function Vault() {
                               value={editForm.url}
                               onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
                               placeholder="https://example.com"
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                             />
                           </div>
                           <div>
@@ -2848,7 +2918,7 @@ export default function Vault() {
                               value={editForm.alias_url}
                               onChange={(e) => setEditForm({ ...editForm, alias_url: e.target.value })}
                               placeholder="https://dev.example.com"
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                             />
                           </div>
                         </div>
@@ -2859,7 +2929,7 @@ export default function Vault() {
                             value={editForm.username}
                             onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
                             placeholder="admin@example.com"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                           />
                         </div>
                         <div>
@@ -2881,7 +2951,7 @@ export default function Vault() {
                             value={editForm.notes}
                             onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                             placeholder="Optional description"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                           />
                         </div>
                         {/*
@@ -2904,7 +2974,7 @@ export default function Vault() {
                               setEditForm({ ...editForm, destination_patterns: e.target.value })
                             }
                             placeholder={'api.example.com/*\napi.example.com/v1/chat/*'}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-mono text-xs outline-none focus:border-slate-400"
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-mono text-xs outline-hidden focus:border-slate-400"
                           />
                           <p className="mt-1 text-xs text-slate-500">
                             Leave empty to block agent access entirely. Name the exact
@@ -2922,7 +2992,7 @@ export default function Vault() {
                               onChange={(e) => setEditForm({ ...editForm, rotation_interval_days: e.target.value })}
                               placeholder="e.g. 90"
                               min="1"
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                             />
                           </div>
                           <div>
@@ -2931,7 +3001,7 @@ export default function Vault() {
                               type="date"
                               value={editForm.expires_at}
                               onChange={(e) => setEditForm({ ...editForm, expires_at: e.target.value })}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                             />
                           </div>
                         </div>
@@ -3078,7 +3148,7 @@ export default function Vault() {
                             </p>
                           )}
                           <div className="mt-2 flex items-center gap-2">
-                            <div className="flex-1 rounded bg-white px-2 py-1 font-mono text-xs text-slate-700">
+                            <div className="flex-1 rounded-sm bg-white px-2 py-1 font-mono text-xs text-slate-700">
                               {revealedSecrets.has(entry.id) ? entry.value : '••••••••••••'}
                             </div>
                             <button
@@ -3088,7 +3158,7 @@ export default function Vault() {
                                 else next.add(entry.id);
                                 setRevealedSecrets(next);
                               }}
-                              className="rounded p-1 text-slate-400 hover:text-slate-600"
+                              className="rounded-sm p-1 text-slate-400 hover:text-slate-600"
                               title={revealedSecrets.has(entry.id) ? 'Hide' : 'Reveal'}
                             >
                               {revealedSecrets.has(entry.id) ? (
@@ -3160,7 +3230,7 @@ export default function Vault() {
                         </div>
                         ) : (
                           <span
-                            className="ml-2 inline-flex flex-shrink-0 items-center gap-1 self-start rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+                            className="ml-2 inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
                             title="You have viewer access to this collection"
                           >
                             <Lock className="h-3 w-3" />
@@ -3187,7 +3257,7 @@ export default function Vault() {
                           onChange={(e) => setRotatePassword(e.target.value)}
                           placeholder="Enter your password"
                           autoFocus
-                          className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                          className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                         />
                         <button
                           type="submit"
@@ -3452,8 +3522,8 @@ export default function Vault() {
                 <FolderPlus className="h-4 w-4 text-white" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">New collection</h3>
-                <p className="text-xs text-slate-500">You become its manager.</p>
+                <h3 className="text-sm font-semibold text-slate-900">New vault</h3>
+                <p className="text-xs text-slate-500">Group credentials for a client or team. You manage who can access it.</p>
               </div>
             </div>
             <form
@@ -3477,7 +3547,7 @@ export default function Vault() {
                   placeholder="e.g. Payments team"
                   required
                   autoFocus
-                  className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                 />
               </div>
               <div>
@@ -3488,7 +3558,7 @@ export default function Vault() {
                   value={newCollection.description}
                   onChange={(e) => setNewCollection((c) => ({ ...c, description: e.target.value }))}
                   placeholder="What this collection holds"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-slate-400"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-hidden focus:border-slate-400"
                 />
               </div>
               <CollectionPrivateAccessPolicyField

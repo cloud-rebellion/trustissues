@@ -521,7 +521,8 @@ export const api = {
   // vault wrappers.
   collections: {
     list: () => request<Collection[]>('/collections'),
-    get: (id: string) => request<Collection>(`/collections/${id}`),
+    get: (id: string, signal?: AbortSignal) =>
+      request<Collection>(`/collections/${id}`, { signal }),
     create: (data: {
       name: string;
       description: string;

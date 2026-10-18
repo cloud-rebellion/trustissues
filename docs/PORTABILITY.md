@@ -6,7 +6,7 @@ problems and must not be handled as if they were the same artifact.
 | Artifact | Purpose | Contents | Normal protection |
 |---|---|---|---|
 | SQLite snapshot | Disaster recovery of one instance | Encrypted vault data plus users, authority, audit and operational state | Mode 0600, whole-file encryption off-host, vault key stored separately |
-| Native vault export | Moving user-visible vault contents between Trustissues instances | **Plaintext** JSON containing every included password and secret custom field | Trusted device and endpoint, immediate whole-file encryption, shortest possible lifetime |
+| Native vault export | Moving user-visible vault contents between Trustissues instances | JSON containing every included password and secret custom field, optionally wrapped in PGP | Choose PGP in the export dialog; protect plaintext JSON separately |
 
 Use `docs/BACKUP.md` for disaster recovery. A native export is useful for
 portability and an independent last-resort copy of vault contents, but it does
@@ -14,9 +14,13 @@ not replace a scheduled, restore-tested database backup.
 
 ## Exporting a vault
 
-Unlock the Vault page, choose **Export**, and re-enter the current account
-password. The server returns a `trustissues-vault-YYYYMMDD-HHMMSS.json` file
-with `format: "trustissues-vault"` and `version: 1`.
+Unlock the Vault page, choose **Export vault**, select plaintext JSON or PGP,
+and re-enter the current account password. The server returns native JSON with
+`format: "trustissues-vault"` and `version: 2` (the importer also accepts legacy
+version 1). For PGP, the browser encrypts this response before downloading an
+armored `.json.asc` file. PGP keys and passphrases stay in the browser. See
+[`PGP import and export`](PGP-IMPORT-EXPORT.md) for key/passphrase setup and
+Proton Pass migration.
 
 Export is a bulk equivalent of Unlock, not an admin-only database dump. It
 contains:
@@ -90,7 +94,8 @@ can open it can read all included credentials.
 
 ## Importing a native export
 
-Choose **Import** on the Vault page and select the `.json` export. Native import
+Choose **Import vault** and select native `.json` or its PGP-encrypted
+`.asc`/`.pgp`/`.gpg` wrapper. Decrypt PGP files in the dialog first. Native import
 has a server-side preview that reports entry/collection counts, name conflicts
 and how many requested auto-rotation schedules will be disabled. The preview
 returns no secret values. Confirmation requires the current account password

@@ -78,7 +78,7 @@ export default function Setup() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-slate-400 focus:ring-0"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
               placeholder="Admin"
             />
           </div>
@@ -97,7 +97,7 @@ export default function Setup() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-slate-400 focus:ring-0"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
               placeholder="admin@example.com"
             />
           </div>
@@ -117,7 +117,7 @@ export default function Setup() {
               required
               minLength={12}
               autoComplete="new-password"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-slate-400 focus:ring-0"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
               placeholder="Minimum 12 characters"
             />
             <p className="mt-1 text-xs text-slate-400">

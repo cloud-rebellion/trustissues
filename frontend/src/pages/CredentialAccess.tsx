@@ -154,7 +154,7 @@ export default function CredentialAccess() {
         <select
           value={agentFilter}
           onChange={(e) => resetTo(() => setAgentFilter(e.target.value))}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-slate-400"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-hidden focus:border-slate-400"
         >
           <option value="">All agents</option>
           {agents.map((a) => (
@@ -166,7 +166,7 @@ export default function CredentialAccess() {
         <select
           value={eventFilter}
           onChange={(e) => resetTo(() => setEventFilter(e.target.value))}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-slate-400"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-hidden focus:border-slate-400"
         >
           <option value="">All events</option>
           {EVENT_OPTIONS.map((ev) => (
@@ -254,7 +254,7 @@ export default function CredentialAccess() {
                     </td>
                     <td className="px-4 py-2.5">
                       <span
-                        className={`inline-flex rounded px-1.5 py-0.5 text-xs font-medium ${eventBadgeClasses(
+                        className={`inline-flex rounded-sm px-1.5 py-0.5 text-xs font-medium ${eventBadgeClasses(
                           entry.event,
                         )}`}
                       >

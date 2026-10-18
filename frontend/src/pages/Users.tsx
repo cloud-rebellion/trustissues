@@ -218,7 +218,7 @@ export default function UsersPage() {
   }
 
   const inputClass =
-    'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-slate-400 focus:ring-0';
+    'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0';
 
   return (
     <Layout>
@@ -321,7 +321,7 @@ export default function UsersPage() {
                               data: { role: e.target.value as Role },
                             })
                           }
-                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none focus:border-slate-400"
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-hidden focus:border-slate-400"
                         >
                           {ROLE_OPTIONS.map((r) => (
                             <option key={r.value} value={r.value}>
@@ -672,7 +672,7 @@ export default function UsersPage() {
                       send_email: e.target.checked,
                     })
                   }
-                  className="h-4 w-4 rounded border-slate-300"
+                  className="h-4 w-4 rounded-sm border-slate-300"
                 />
                 Send the invitation by email (needs SMTP configured)
               </label>

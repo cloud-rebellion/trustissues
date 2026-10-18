@@ -397,7 +397,7 @@ export default function RotationManager({
               {pendingRevoke.predecessor_key_id ? (
                 <>
                   The last rotation replaced key{' '}
-                  <code className="rounded bg-amber-100 px-1 py-0.5 font-mono">
+                  <code className="rounded-sm bg-amber-100 px-1 py-0.5 font-mono">
                     {pendingRevoke.predecessor_key_id}
                   </code>{' '}
                   but could not delete it, and it still authenticates at{' '}
@@ -477,7 +477,7 @@ export default function RotationManager({
                   onChange={(e) => setRetryPassword(e.target.value)}
                   placeholder="Enter your password"
                   autoFocus
-                  className="flex-1 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                  className="flex-1 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm outline-hidden focus:border-amber-400"
                 />
                 <button
                   type="submit"
@@ -500,7 +500,7 @@ export default function RotationManager({
               <div className="mt-2 rounded-lg border border-amber-300 bg-white p-3">
                 <p className="text-xs font-medium text-slate-700">
                   Confirm you deleted{' '}
-                  <code className="rounded bg-slate-100 px-1 py-0.5 font-mono">
+                  <code className="rounded-sm bg-slate-100 px-1 py-0.5 font-mono">
                     {pendingRevoke.predecessor_key_id}
                   </code>{' '}
                   at {selectedProvider?.label ?? providerName ?? 'the provider'} yourself, outside this tool.
@@ -518,7 +518,7 @@ export default function RotationManager({
                     value={resolveConfirmInput}
                     onChange={(e) => setResolveConfirmInput(e.target.value)}
                     placeholder={pendingRevoke.predecessor_key_id}
-                    className="w-full rounded-lg border border-slate-200 px-2 py-1.5 font-mono text-xs outline-none focus:border-slate-400"
+                    className="w-full rounded-lg border border-slate-200 px-2 py-1.5 font-mono text-xs outline-hidden focus:border-slate-400"
                   />
                 </label>
                 <div className="mt-2 flex items-center gap-2">
@@ -573,7 +573,7 @@ export default function RotationManager({
               value={providerName}
               onChange={(e) => handleProviderChange(e.target.value)}
               disabled={providersQuery.isLoading}
-              className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-slate-400 disabled:opacity-50"
+              className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-hidden focus:border-slate-400 disabled:opacity-50"
             >
               <option value="">No provider (manual)</option>
               {[...providers]
@@ -674,7 +674,7 @@ export default function RotationManager({
             <select
               value={interval}
               onChange={(e) => setIntervalDays(Number(e.target.value))}
-              className="rounded-lg border border-slate-200 px-2 py-1 text-sm outline-none focus:border-slate-400"
+              className="rounded-lg border border-slate-200 px-2 py-1 text-sm outline-hidden focus:border-slate-400"
             >
               {INTERVALS.map((d) => (
                 <option key={d} value={d}>{d === 0 ? 'No interval' : `Every ${d} days`}</option>
@@ -703,7 +703,7 @@ export default function RotationManager({
             <select
               value={addType}
               onChange={(e) => setAddType(e.target.value as RotationTarget['type'])}
-              className="rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-slate-400"
+              className="rounded-lg border border-slate-200 px-2 py-1 text-xs outline-hidden focus:border-slate-400"
             >
               {TARGET_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
@@ -757,7 +757,7 @@ export default function RotationManager({
                       <Icon className="h-3.5 w-3.5 text-slate-500" />
                       {(TARGET_TYPES.find((x) => x.value === t.type) || TARGET_TYPES[0]).label}
                     </span>
-                    <button type="button" onClick={() => remove(i)} className="rounded p-1 text-slate-400 hover:text-red-500" title="Remove target">
+                    <button type="button" onClick={() => remove(i)} className="rounded-sm p-1 text-slate-400 hover:text-red-500" title="Remove target">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -839,7 +839,7 @@ function Field({ label, value, onChange, placeholder }: { label: string; value?:
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-slate-200 px-2 py-1 font-mono text-xs outline-none focus:border-slate-400"
+        className="w-full rounded-lg border border-slate-200 px-2 py-1 font-mono text-xs outline-hidden focus:border-slate-400"
       />
     </label>
   );

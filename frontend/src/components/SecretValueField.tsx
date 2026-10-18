@@ -39,7 +39,7 @@ export default function SecretValueField({
           spellCheck={false}
           placeholder={placeholder}
           required={required}
-          className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-mono outline-none focus:border-slate-400"
+          className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-mono outline-hidden focus:border-slate-400"
         />
         <button
           type="button"

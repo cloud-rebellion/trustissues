@@ -371,10 +371,11 @@ export const vaultApi = {
       signal,
     });
   },
-  importConfirm: (entries: ImportEntry[]) =>
+  importConfirm: (entries: ImportEntry[], signal?: AbortSignal) =>
     request<{ imported: number; skipped?: { name: string; reason: string }[] }>('/vault/import/confirm', {
       method: 'POST',
       body: JSON.stringify({ entries }),
+      signal,
     }),
   nativeImportPreview: (file: File, signal?: AbortSignal) => {
     const formData = new FormData();

@@ -34,10 +34,11 @@ func NewVaultImportHandler(dbConn *sql.DB, vaultHandler *VaultHandler) *VaultImp
 type PasswordManagerFormat string
 
 const (
-	Format1Password PasswordManagerFormat = "1password"
-	FormatBitwarden PasswordManagerFormat = "bitwarden"
-	FormatLastPass  PasswordManagerFormat = "lastpass"
-	FormatUnknown   PasswordManagerFormat = "unknown"
+	Format1Password  PasswordManagerFormat = "1password"
+	FormatBitwarden  PasswordManagerFormat = "bitwarden"
+	FormatLastPass   PasswordManagerFormat = "lastpass"
+	FormatProtonPass PasswordManagerFormat = "protonpass"
+	FormatUnknown    PasswordManagerFormat = "unknown"
 )
 
 // ImportEntry represents a single entry to be imported
@@ -119,6 +120,15 @@ type VaultImportPreview struct {
 
 // detectFormat attempts to detect the password manager format from CSV headers
 func detectFormat(headers []string) PasswordManagerFormat {
+	// Proton shares LastPass's basic login columns but has different notes,
+	// item types and vault grouping. Never silently parse it as LastPass.
+	columns := make(map[string]bool, len(headers))
+	for _, header := range headers {
+		columns[strings.ToLower(strings.TrimSpace(strings.TrimPrefix(header, "\uFEFF")))] = true
+	}
+	if columns["type"] && columns["name"] && columns["password"] && columns["note"] && columns["totp"] && columns["vault"] {
+		return FormatProtonPass
+	}
 	headersStr := strings.ToLower(strings.Join(headers, ","))
 
 	// Check for 1Password format
@@ -158,7 +168,7 @@ func (h *VaultImportHandler) parseCSV(reader io.Reader, format PasswordManagerFo
 		return nil, nil, fmt.Errorf("failed to read CSV headers: %w", err)
 	}
 
-	var entries []ImportEntry
+	entries := []ImportEntry{}
 	skipped := []skippedEntry{}
 	lineNum := 1
 
@@ -324,12 +334,11 @@ func (h *VaultImportHandler) personalImportNameSet(ctx context.Context, queries 
 }
 
 // checkConflicts checks for existing personal entries with the same name.
-func (h *VaultImportHandler) checkConflicts(ctx context.Context, userID string, entries []ImportEntry) []string {
-	var conflicts []string
+func (h *VaultImportHandler) checkConflicts(ctx context.Context, userID string, entries []ImportEntry) ([]string, error) {
+	conflicts := []string{}
 	existing, err := h.personalImportNameSet(ctx, h.handler.queries, userID)
 	if err != nil {
-		slog.Error("failed to check existing entries", "error", err)
-		return conflicts
+		return nil, err
 	}
 
 	// Check for conflicts
@@ -339,7 +348,7 @@ func (h *VaultImportHandler) checkConflicts(ctx context.Context, userID string, 
 		}
 	}
 
-	return conflicts
+	return conflicts, nil
 }
 
 // ImportPreview handles POST /api/vault/import/preview
@@ -393,6 +402,13 @@ func (h *VaultImportHandler) ImportPreview(w http.ResponseWriter, r *http.Reques
 	// corrected. A rendered control that changes nothing is a broken feature,
 	// not a preference.
 	format := detectFormat(headers)
+	if format == FormatProtonPass || strings.EqualFold(strings.TrimSpace(r.FormValue("format")), string(FormatProtonPass)) {
+		// The current browser converts Proton CSV into the atomic native
+		// migration flow, preserving vaults and non-login entries. Older clients
+		// must get a useful error instead of a lossy LastPass interpretation.
+		writeBadRequest(w, r, "Proton Pass CSV needs the updated import dialog; reload the app and select Proton Pass CSV, or use its JSON/PGP export")
+		return
+	}
 	if chosen := strings.ToLower(strings.TrimSpace(r.FormValue("format"))); chosen != "" && chosen != "auto" {
 		switch chosen {
 		case string(Format1Password), string(FormatBitwarden), string(FormatLastPass):
@@ -439,7 +455,12 @@ func (h *VaultImportHandler) ImportPreview(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Check for conflicts
-	conflicts := h.checkConflicts(r.Context(), userID, entries)
+	conflicts, err := h.checkConflicts(r.Context(), userID, entries)
+	if err != nil {
+		logError(r, "failed to check personal import names", "error", err)
+		writeInternalError(w, r, "could not verify import conflicts")
+		return
+	}
 
 	// Return preview
 	preview := VaultImportPreview{

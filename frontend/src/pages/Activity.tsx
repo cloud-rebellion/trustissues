@@ -204,7 +204,7 @@ export default function ActivityPage() {
           <select
             value={userFilter}
             onChange={(e) => handleUserFilterChange(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-slate-400"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-hidden focus:border-slate-400"
           >
             <option value="">All users</option>
             {users.map((u) => (
@@ -217,7 +217,7 @@ export default function ActivityPage() {
         <select
           value={actionFilter}
           onChange={(e) => handleActionFilterChange(e.target.value)}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-slate-400"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-hidden focus:border-slate-400"
         >
           <option value="">All actions</option>
           {allFilterOptions.map((a) => (

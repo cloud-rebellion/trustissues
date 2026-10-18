@@ -8,6 +8,10 @@ import type {
   NativeVaultImportPreview,
   VaultImportPreview,
 } from '@/lib/vault-types';
+import PgpFields, { EMPTY_PGP_OPTIONS } from './PgpFields';
+import { isPgpFile, prepareVaultImport } from '@/lib/vault-pgp';
+import { MAX_PGP_BYTES } from '@/lib/vault-pgp-types';
+import { normalizeCsvPreview } from '@/lib/vault-import-preview';
 
 interface VaultImportModalProps {
   isOpen: boolean;
@@ -42,6 +46,9 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
   const [isUploading, setIsUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<string>('auto');
+  const [pgp, setPgp] = useState(EMPTY_PGP_OPTIONS);
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
+  const preparedFileRef = useRef<File | null>(null);
   const previewAbortRef = useRef<AbortController | null>(null);
   const importAbortRef = useRef<AbortController | null>(null);
 
@@ -55,6 +62,9 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
   const reset = useCallback(() => {
     abortInFlight();
     setFile(null);
+    preparedFileRef.current = null;
+    setPgp(EMPTY_PGP_OPTIONS);
+    setImportWarnings([]);
     setPreview(null);
     setNativePreview(null);
     setPassword('');
@@ -79,18 +89,21 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       const lowerName = selectedFile.name.toLowerCase();
-      if (!lowerName.endsWith('.csv') && !lowerName.endsWith('.json')) {
-        toast.error('Please select a CSV or JSON file');
+      if (!lowerName.endsWith('.csv') && !lowerName.endsWith('.json') && !isPgpFile(selectedFile)) {
+        toast.error('Please select CSV, JSON, PGP (.asc/.pgp/.gpg), or an encrypted Proton Pass ZIP');
         event.currentTarget.value = '';
         return;
       }
-      if (selectedFile.size > MAX_IMPORT_BYTES) {
-        toast.error('File size must be 10MB or smaller');
+      if (selectedFile.size > (isPgpFile(selectedFile) ? MAX_PGP_BYTES : MAX_IMPORT_BYTES)) {
+        toast.error(isPgpFile(selectedFile) ? 'Encrypted files must be 16MB or smaller; decrypted data must be 10MB or smaller.' : 'File size must be 10MB or smaller');
         event.currentTarget.value = '';
         return;
       }
       abortInFlight();
       setFile(selectedFile);
+      preparedFileRef.current = null;
+      setPgp(EMPTY_PGP_OPTIONS);
+      setImportWarnings([]);
       setPreview(null);
       setNativePreview(null);
       setPassword('');
@@ -108,23 +121,42 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
     previewAbortRef.current = controller;
     setIsUploading(true);
     setNativeError(null);
+    preparedFileRef.current = null;
     try {
-      if (isNativeExport(file)) {
-        const result = await vaultApi.nativeImportPreview(file, controller.signal);
-        if (!controller.signal.aborted) setNativePreview(result);
+      // Plain CSV/native JSON retain their existing path. PGP and Proton JSON
+      // are prepared locally before entering the same validation/confirm flow.
+      let prepared = file;
+      let warnings: string[] = [];
+      if (isPgpFile(file) || isNativeExport(file) || file.name.toLowerCase().endsWith('.csv')) {
+        const result = await prepareVaultImport(file, { ...pgp }, controller.signal, selectedFormat);
+        prepared = result.file;
+        warnings = result.warnings;
+      }
+      if (controller.signal.aborted || previewAbortRef.current !== controller) return;
+      setPgp(EMPTY_PGP_OPTIONS);
+      setImportWarnings(warnings);
+      if (isNativeExport(prepared)) {
+        const result = await vaultApi.nativeImportPreview(prepared, controller.signal);
+        if (!controller.signal.aborted && previewAbortRef.current === controller) {
+          preparedFileRef.current = prepared;
+          setNativePreview(result);
+        }
       } else {
-        const result = await vaultApi.importPreview(file, selectedFormat, controller.signal);
-        if (!controller.signal.aborted) setPreview(result);
+        const result = await vaultApi.importPreview(prepared, selectedFormat, controller.signal);
+        if (!controller.signal.aborted && previewAbortRef.current === controller) setPreview(normalizeCsvPreview(result));
       }
     } catch (error: unknown) {
       if (!isAbortError(error) && !controller.signal.aborted) {
-        if (isNativeExport(file)) {
-          const message = 'Could not validate this TrustIssues export. Check that it is an unmodified version 1 export and try again.';
+        if (isPgpFile(file)) {
+          setNativeError('Could not decrypt or validate this PGP/Proton Pass export. Check the export passphrase or key. Use an export without attachments. Nothing was imported.');
+        } else if (isNativeExport(file)) {
+          const message = 'Could not validate this JSON export. Check that it is a supported, unmodified TrustIssues or Proton Pass export and try again.';
           setNativeError(message);
           toast.error(message);
         } else {
-          console.error('Import preview error:', error);
-          toast.error(error instanceof Error ? error.message : 'Failed to preview import');
+          const message = error instanceof Error ? error.message : 'Failed to preview import';
+          setNativeError(message);
+          toast.error(message);
         }
       }
     } finally {
@@ -138,10 +170,14 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
   const handleImport = async () => {
     if (!preview) return;
 
+    importAbortRef.current?.abort();
+    const controller = new AbortController();
+    importAbortRef.current = controller;
     setIsImporting(true);
     try {
       const entriesToImport = preview.entries.filter(entry => !entry.skip);
-      const result = await vaultApi.importConfirm(entriesToImport);
+      const result = await vaultApi.importConfirm(entriesToImport, controller.signal);
+      if (controller.signal.aborted || importAbortRef.current !== controller) return;
       const skipped = result.skipped ?? [];
       if (skipped.length > 0) {
         // A partial import used to report plain success: entries with a
@@ -163,15 +199,18 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
       onImportComplete();
       reset();
     } catch (error: unknown) {
-      console.error('Import error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to import entries');
+      if (!controller.signal.aborted) toast.error(error instanceof Error ? error.message : 'Failed to import entries');
     } finally {
-      setIsImporting(false);
+      if (importAbortRef.current === controller) {
+        importAbortRef.current = null;
+        setIsImporting(false);
+      }
     }
   };
 
   const handleNativeImport = async () => {
-    if (!file || !nativePreview || nativePreview.conflicts.length > 0 || password.length === 0) {
+    const preparedFile = preparedFileRef.current;
+    if (!preparedFile || !nativePreview || nativePreview.conflicts.length > 0 || password.length === 0) {
       return;
     }
 
@@ -185,7 +224,7 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
 
     try {
       const result = await vaultApi.nativeImportConfirm(
-        file,
+        preparedFile,
         passwordForRequest,
         controller.signal
       );
@@ -228,6 +267,10 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
   };
 
   const handleBack = () => {
+    abortInFlight();
+    preparedFileRef.current = null;
+    setPgp(EMPTY_PGP_OPTIONS);
+    setImportWarnings([]);
     setPreview(null);
     setNativePreview(null);
     setPassword('');
@@ -251,7 +294,7 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-50"
+        className="absolute inset-0 bg-black/50"
         onClick={handleClose}
       />
 
@@ -282,18 +325,18 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Select a CSV or TrustIssues JSON file to import
+                  Select CSV, JSON, PGP, or an encrypted Proton Pass ZIP
                 </label>
                 <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-slate-400 transition-colors">
                   <FileText className="mx-auto h-12 w-12 text-slate-400" />
                   <div className="mt-4">
-                    <label className="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">
+                    <label className="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md shadow-xs text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer">
                       <Upload className="h-4 w-4 mr-2" />
                       Choose File
                       <input
                         type="file"
                         className="sr-only"
-                        accept=".csv,.json,text/csv,application/json"
+                        accept=".csv,.json,.asc,.pgp,.gpg,.zip,text/csv,application/json,application/pgp-encrypted,application/zip"
                         onChange={handleFileSelect}
                       />
                     </label>
@@ -304,10 +347,12 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
                     </p>
                   )}
                   <p className="mt-4 text-sm text-slate-500">
-                    Supports TrustIssues JSON exports and 1Password, Bitwarden, or LastPass CSV exports
+                    Supports Proton Pass encrypted ZIP/PGP, JSON or CSV, TrustIssues JSON, and 1Password, Bitwarden, or LastPass CSV exports
                   </p>
                 </div>
               </div>
+
+              {file && isPgpFile(file) && <PgpFields direction="import" value={pgp} onChange={setPgp} disabled={isUploading} />}
 
               {file && isNativeExport(file) && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -332,9 +377,10 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
                 <select
                   value={selectedFormat}
                   onChange={(e) => setSelectedFormat(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-slate-400"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-hidden focus:border-slate-400"
                 >
                   <option value="auto">Auto-detect format</option>
+                  <option value="protonpass">Proton Pass CSV</option>
                   <option value="1password">1Password</option>
                   <option value="bitwarden">Bitwarden</option>
                   <option value="lastpass">LastPass</option>
@@ -351,7 +397,7 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
                 <div className="flex justify-end">
                   <button
                     onClick={handlePreview}
-                    disabled={isUploading}
+                    disabled={isUploading || Boolean(file && isPgpFile(file) && (pgp.mode === 'key' ? !pgp.key : !pgp.passphrase))}
                     className={clsx(
                       "px-4 py-2 bg-slate-900 text-white rounded-md text-sm font-medium",
                       "hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -361,6 +407,12 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
                   </button>
                 </div>
               )}
+            </div>
+          )}
+          {importWarnings.length > 0 && (preview || nativePreview) && (
+            <div role="note" className="my-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-semibold">Proton Pass migration details</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">{importWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
             </div>
           )}
 
@@ -472,7 +524,7 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
                                 type="checkbox"
                                 checked={entry.skip || false}
                                 onChange={() => toggleSkipEntry(index)}
-                                className="rounded border-slate-300 text-slate-900"
+                                className="rounded-sm border-slate-300 text-slate-900"
                               />
                               <span className="ml-2 text-xs text-slate-600">
                                 {entry.skip ? 'Skipped' : 'Import'}
@@ -526,10 +578,12 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
                   <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
                   <div className="ml-3">
                     <p className="text-sm font-medium text-red-800">
-                      This file contains plaintext vault secrets.
+                      {file && isPgpFile(file) ? 'The encrypted file has been decrypted in memory.' : 'This file contains plaintext vault secrets.'}
                     </p>
                     <p className="text-sm text-red-700 mt-1">
-                      Anyone who can open it can read them. Keep it private and remove every plaintext copy after you verify the import.
+                      {file && isPgpFile(file)
+                        ? 'No plaintext download was created. The decrypted data is sent to TrustIssues only for preview and the import you confirm.'
+                        : 'Anyone who can open it can read them. Keep it private and remove every plaintext copy after you verify the import.'}
                     </p>
                   </div>
                 </div>
@@ -589,7 +643,7 @@ export default function VaultImportModal({ isOpen, onClose, onImportComplete }: 
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   disabled={nativePreview.conflicts.length > 0 || isImporting}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-slate-400 disabled:bg-slate-100"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-hidden focus:border-slate-400 disabled:bg-slate-100"
                 />
                 <p className="mt-1 text-xs text-slate-500">
                   Reauthentication is required before the server validates and encrypts every imported secret for this account.

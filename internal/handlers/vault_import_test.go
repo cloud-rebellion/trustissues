@@ -16,6 +16,8 @@ func TestDetectFormat(t *testing.T) {
 		{"1password", []string{"Title", "Website", "Username", "Password", "Notes"}, Format1Password},
 		{"bitwarden", []string{"folder", "favorite", "type", "name", "notes", "fields", "login_uri", "login_username", "login_password", "login_totp"}, FormatBitwarden},
 		{"lastpass", []string{"url", "username", "password", "extra", "name", "grouping", "fav"}, FormatLastPass},
+		{"proton before lastpass", []string{"type", "name", "url", "email", "username", "password", "note", "totp", "vault"}, FormatProtonPass},
+		{"proton BOM", []string{"\uFEFFtype", "name", "password", "note", "totp", "vault"}, FormatProtonPass},
 		{"unknown", []string{"a", "b", "c"}, FormatUnknown},
 	}
 	for _, tc := range cases {

@@ -275,6 +275,6 @@ describe('protected collection read failures are never rendered as emptiness', (
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(/Collections could not be loaded/i);
     expect(alert).toHaveTextContent(/Nothing is being reported as empty or deleted/i);
-    expect(screen.getByRole('button', { name: 'New collection' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'New vault' })).toBeDisabled();
   });
 });
