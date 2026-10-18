@@ -1,6 +1,8 @@
 package flarereport
 
 import (
+	"encoding/json"
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -30,7 +32,7 @@ func TestScrubDropsAuthHeadersInAnyCasing(t *testing.T) {
 	}
 }
 
-func TestScrubKeepsTriageHeaders(t *testing.T) {
+func TestScrubDropsEvenTriageHeaderValues(t *testing.T) {
 	in := map[string]string{
 		"Host":         "vault.example",
 		"User-Agent":   "trustissues-boot/1.0",
@@ -39,8 +41,8 @@ func TestScrubKeepsTriageHeaders(t *testing.T) {
 	}
 	ev := scrubRequestEvent(headersOf(in))
 	for name := range in {
-		if _, ok := ev.Request.Headers[name]; !ok {
-			t.Errorf("triage header %q was dropped; the report is now useless for triage", name)
+		if _, ok := ev.Request.Headers[name]; ok {
+			t.Errorf("client-controlled header %q survived the privacy boundary", name)
 		}
 	}
 }
@@ -66,8 +68,8 @@ func TestScrubClearsQueryCookiesAndBody(t *testing.T) {
 	if got.Data != "" {
 		t.Errorf("request body survived: %q", got.Data)
 	}
-	if got.URL != "https://vault.example/api/vault/entries" {
-		t.Errorf("URL kept its query string: %q", got.URL)
+	if got.URL != "/api/vault/:id" {
+		t.Errorf("URL was not projected to a product route template: %q", got.URL)
 	}
 	if got.Method != "POST" {
 		t.Errorf("method was lost, so the report cannot be triaged: %q", got.Method)
@@ -184,17 +186,100 @@ func TestEveryAuthHeaderInTreeIsScrubbed(t *testing.T) {
 	t.Logf("checked %d credential-bearing header names out of %d header call sites", checked, len(names))
 }
 
-// TestAllowListHoldsNothingCredentialBearing is the same guard from the other
-// side. The enumeration above can only fail if a new auth header is ADDED to
-// reportableHeaders, so state that rule directly as well: nothing on the
-// allow-list may look like a credential.
-func TestAllowListHoldsNothingCredentialBearing(t *testing.T) {
-	for name := range reportableHeaders {
-		if looksCredentialBearing(name) {
-			t.Errorf("reportableHeaders contains %q, which reads as credential-bearing; the allow-list is the one place a leak can be reintroduced", name)
-		}
-		if name != strings.ToLower(name) {
-			t.Errorf("reportableHeaders key %q is not lower-case, so headerReportable will never match it", name)
-		}
+func TestClientHooksAllowOnlyPrivateDiagnostics(t *testing.T) {
+	const canary = "PRIVATE_SYNTHETIC_CSV_VALUE_8931"
+	options := ClientOptions("https://public@flare.example/1", "trustissues", "abc1234")
+	for _, hook := range []struct {
+		name string
+		fn   func(*sentry.Event, *sentry.EventHint) *sentry.Event
+	}{{"error", options.BeforeSend}, {"transaction", options.BeforeSendTransaction}} {
+		t.Run(hook.name, func(t *testing.T) {
+			in := &sentry.Event{
+				Message: canary, Release: canary, ServerName: canary, Logger: canary,
+				Transaction: canary, Environment: "production", Fingerprint: []string{canary},
+				User:        sentry.User{ID: canary, Email: canary},
+				Contexts:    map[string]sentry.Context{"vault": {"value": canary}},
+				Tags:        map[string]string{"vault": canary},
+				Breadcrumbs: []*sentry.Breadcrumb{{Message: canary, Data: map[string]interface{}{"value": canary}}},
+				Request: &sentry.Request{
+					URL:    "https://" + canary + ".example/api/vault/" + canary + "?password=" + canary,
+					Method: "POST", Data: canary, Cookies: canary, QueryString: canary,
+					Headers: map[string]string{"User-Agent": canary, "X-Service-Key": canary},
+					Env:     map[string]string{"REMOTE_ADDR": canary},
+				},
+				Exception: []sentry.Exception{{Type: canary, Value: canary, Module: canary,
+					Mechanism: &sentry.Mechanism{Type: canary, Description: canary},
+					Stacktrace: &sentry.Stacktrace{Frames: []sentry.Frame{{
+						Module:   "github.com/bright-interaction/trustissues/internal/handlers",
+						Function: "(*VaultImportHandler).ImportPreview", Filename: "vault_import.go", Lineno: 450,
+						AbsPath: canary, Symbol: canary, ContextLine: canary,
+						PreContext: []string{canary}, PostContext: []string{canary},
+						Vars: map[string]interface{}{"password": canary}, Package: canary,
+					}, {Module: canary, Filename: canary, Function: canary, Lineno: 1}}},
+				}},
+				Attachments: []*sentry.Attachment{{Filename: canary, Payload: []byte(canary)}},
+			}
+			if hook.name == "transaction" {
+				in.Type = "transaction"
+			}
+			out := hook.fn(in, nil)
+			raw, err := json.Marshal(out)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(raw), canary) || len(out.Attachments) != 0 {
+				t.Fatal("private synthetic input survived an actual client hook")
+			}
+			if out.Message != serverErrorCode || out.Release != "abc1234" || out.ServerName != "trustissues" || out.Environment != "production" {
+				t.Fatalf("safe identity/category lost: %+v", out)
+			}
+			if out.Request.URL != "/api/vault/:id" || len(out.Exception[0].Stacktrace.Frames) == 0 {
+				t.Fatal("useful route and first-party instruction location were lost")
+			}
+			for _, frame := range out.Exception[0].Stacktrace.Frames {
+				if frame.Filename == "vault_import.go" && frame.Lineno == 450 {
+					t.Fatal("a prefilled exception frame was trusted instead of the compiler capture chain")
+				}
+			}
+		})
+	}
+}
+
+func TestSDKScopeAndHintsCannotReattachPrivateDataAfterHook(t *testing.T) {
+	const canary = "PRIVATE_SYNTHETIC_SCOPE_VALUE_4572"
+	transport := &stalledTransport{}
+	options := ClientOptions("https://public@flare.example/1", "trustissues", "abc1234")
+	options.Transport = transport
+	options.DisableLogs, options.DisableMetrics = true, true
+	client, err := sentry.NewClient(options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope := sentry.NewScope()
+	scope.SetUser(sentry.User{Email: canary})
+	scope.SetContext("vault", sentry.Context{"value": canary})
+	scope.SetTag("vault", canary)
+	scope.AddBreadcrumb(&sentry.Breadcrumb{Message: canary}, 10)
+	scope.AddAttachment(&sentry.Attachment{Filename: canary, Payload: []byte(canary)})
+	client.CaptureEvent(&sentry.Event{Message: canary, Exception: []sentry.Exception{{Value: canary}}}, &sentry.EventHint{
+		Data: canary, OriginalException: errors.New(canary), RecoveredException: canary,
+	}, scope)
+	events := transport.captured()
+	if len(events) != 1 {
+		t.Fatalf("expected one real outbound event, got %d", len(events))
+	}
+	raw, err := json.Marshal(events[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), canary) || len(events[0].Attachments) != 0 {
+		t.Fatal("SDK reattached private scope/hint/attachment data after BeforeSend")
+	}
+}
+
+func TestPrivateHeartbeatRemainsLivenessOnly(t *testing.T) {
+	out := privateClientEvent(&sentry.Event{Level: sentry.LevelInfo, Message: "service-up:trustissues"}, "abc1234")
+	if out.Level != sentry.LevelInfo || out.Message != "service-up:trustissues" || strings.Join(out.Fingerprint, ":") != "service-up:trustissues" {
+		t.Fatal("heartbeat no longer has its established liveness semantics")
 	}
 }

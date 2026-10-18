@@ -144,8 +144,8 @@ func TestFlareRecovererStillReportsRealPanics(t *testing.T) {
 	if len(events) != 1 {
 		t.Fatalf("a genuine panic must produce exactly one Flare event, got %d", len(events))
 	}
-	if ex := events[0].Exception; len(ex) == 0 || !strings.Contains(ex[0].Value, "a real panic") {
-		t.Errorf("the reported event does not carry the panic value: %+v", events[0].Exception)
+	if ex := events[0].Exception; len(ex) == 0 || ex[0].Value != serverErrorCode || ex[0].Stacktrace == nil || len(ex[0].Stacktrace.Frames) == 0 {
+		t.Errorf("the reported event lost its private error category/instruction location: %+v", events[0].Exception)
 	}
 	// The request must ride along or the report is not triageable, and it must
 	// have been through the scrubber on the way (scrub_test.go owns the detail).

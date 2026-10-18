@@ -103,8 +103,22 @@ func TestServiceSecretsPanicShipsNoServiceKey(t *testing.T) {
 	if !strings.Contains(report, "/api/service-identities/me/secrets") {
 		t.Error("the report lost the request path, so nobody can triage the panic")
 	}
-	if !strings.Contains(report, "trustissues-boot/1.0") {
-		t.Error("the report lost the user agent, so the scrub is over-broad")
+	if strings.Contains(report, "trustissues-boot/1.0") {
+		t.Error("the report retained a client-controlled header value")
+	}
+	appRouteFrame := false
+	for _, exception := range tr.events[0].Exception {
+		if exception.Stacktrace == nil {
+			continue
+		}
+		for _, frame := range exception.Stacktrace.Frames {
+			if frame.Module == "github.com/bright-interaction/trustissues/internal/handlers" && frame.Filename == "service_secrets.go" {
+				appRouteFrame = true
+			}
+		}
+	}
+	if !appRouteFrame {
+		t.Fatal("private report lost the actual panicking application route location")
 	}
 }
 
@@ -143,4 +157,28 @@ func TestCapturedRequestBodyNeverShips(t *testing.T) {
 		t.Fatalf("marshalling the captured event: %v", err)
 	}
 	assertNoTraceOf(t, string(raw), plaintext, "the plaintext request body")
+}
+
+func TestHandledInternalErrorReportsPrivateDiagnosticOnly(t *testing.T) {
+	const canary = "PRIVATE_SYNTHETIC_HTTP_ERROR_7025"
+	transport := installFlareCapture(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/vault/import/preview?password="+canary, strings.NewReader(canary))
+	req.Header.Set("User-Agent", canary)
+	req.Header.Set("Authorization", canary)
+	rec := httptest.NewRecorder()
+	writeInternalError(rec, req, canary)
+	if rec.Code != http.StatusInternalServerError || len(transport.events) != 1 {
+		t.Fatal("a handled 500 must still respond and report exactly one diagnostic")
+	}
+	raw, err := json.Marshal(transport.events[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), canary) || !strings.Contains(string(raw), "TRUSTISSUES_SERVER_ERROR") || !strings.Contains(string(raw), "/api/vault/import/preview") {
+		t.Fatal("handled 500 report lost its safe diagnostic or retained private input")
+	}
+	writeBadRequest(httptest.NewRecorder(), req, "expected validation")
+	if len(transport.events) != 1 {
+		t.Fatal("expected 4xx must not produce a server error diagnostic")
+	}
 }

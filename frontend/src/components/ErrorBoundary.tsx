@@ -21,6 +21,11 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('ErrorBoundary caught:', error, info.componentStack);
+    // React handles render failures here, so the global error listener may
+    // never see them. The reporter projects this signal to private metadata.
+    window.dispatchEvent(new CustomEvent('flare:exception', {
+      detail: { error, componentStack: info.componentStack },
+    }));
   }
 
   render() {

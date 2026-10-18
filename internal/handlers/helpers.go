@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bright-interaction/trustissues/internal/emailidentity"
+	"github.com/bright-interaction/trustissues/internal/flarereport"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
@@ -163,6 +164,9 @@ func writeConflict(w http.ResponseWriter, r *http.Request, message string) {
 }
 
 func writeInternalError(w http.ResponseWriter, r *http.Request, message string) {
+	// Expected 4xx responses do not enter this path. The telemetry receives a
+	// fixed category and compiler capture location, never the response message.
+	flarereport.CaptureRequestErr(r, fmt.Errorf("TRUSTISSUES_HTTP_500"))
 	writeError(w, r, http.StatusInternalServerError, ErrCodeInternal, message)
 }
 

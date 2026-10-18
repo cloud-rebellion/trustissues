@@ -49,12 +49,21 @@ func ClientOptions(dsn, service, release string) sentry.ClientOptions {
 		// on both so the invariant cannot silently regress if tracing is ever
 		// enabled here.
 		BeforeSend: func(event *sentry.Event, _ *sentry.EventHint) *sentry.Event {
-			return scrubRequestEvent(event)
+			return privateClientEvent(event, release)
 		},
 		BeforeSendTransaction: func(event *sentry.Event, _ *sentry.EventHint) *sentry.Event {
-			return scrubRequestEvent(event)
+			return privateClientEvent(event, release)
 		},
 	}
+}
+
+// Identity comes from startup configuration, never request or scope fields.
+func privateClientEvent(event *sentry.Event, release string) *sentry.Event {
+	out := scrubRequestEvent(event)
+	if out != nil {
+		out.Release = buildLabel(release)
+	}
+	return out
 }
 
 // InitFlare turns on error reporting when FLARE_DSN is set. The DSN is injected
@@ -122,6 +131,17 @@ func CaptureErr(err error) {
 		return
 	}
 	sentry.CaptureException(err)
+}
+
+// CaptureRequestErr adds only request context for projection by the private
+// outbound hook. It does not flush synchronously or collect the request body.
+func CaptureRequestErr(r *http.Request, err error) {
+	if err == nil {
+		return
+	}
+	hub := sentry.CurrentHub().Clone()
+	hub.Scope().SetRequest(r)
+	hub.CaptureException(err)
 }
 
 // Flush drains the send queue. Call from shutdown so an error captured on the
