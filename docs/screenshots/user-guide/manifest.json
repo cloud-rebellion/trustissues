@@ -1,0 +1,119 @@
+{
+  "release": "823c618eaed4d28c24c4a5d2fa6cb19ca6fef13d",
+  "captured_on": "2026-10-18",
+  "environment": "isolated local Chromium; synthetic data only",
+  "images": [
+    {
+      "file": "01-first-run.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 36422,
+      "sha256": "5dc8a01ae4d4aa86eab10936a3ec363fbfdbeaa3136546d8ebb0ad7ee05161cd"
+    },
+    {
+      "file": "02-locked-vault.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 90914,
+      "sha256": "dae736d62ae7e73068c6f413f264609d6ed5dde4277839e64eaaac99ac497f14"
+    },
+    {
+      "file": "03-create-vault.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 152882,
+      "sha256": "4cc8c7a2e70f514ddefecc0b359b88ed9dd92f5f18de90ddfdb88065301d9351"
+    },
+    {
+      "file": "04-vault-overview.png",
+      "width": 1440,
+      "height": 1287,
+      "bytes": 142317,
+      "sha256": "b9d895a740445ee7d6e7db17609200df767c8d53d5cacd174195d73468c1e63a"
+    },
+    {
+      "file": "05-add-credential.png",
+      "width": 1440,
+      "height": 1759,
+      "bytes": 179335,
+      "sha256": "b31656d7e1e363e32bfdcdf9da4899655bc023a1adb76218d486f69d7076625f"
+    },
+    {
+      "file": "06-manage-vault.png",
+      "width": 1440,
+      "height": 1400,
+      "bytes": 201437,
+      "sha256": "e72ff87fa5c4415a7edfcfbfa235ff7b26cdb4643358c7eb5560c002ccbdd2fe"
+    },
+    {
+      "file": "07-rotation-delivery.png",
+      "width": 1440,
+      "height": 1903,
+      "bytes": 202928,
+      "sha256": "7891faf6bb7e285a486822feab72effd48f0ce6b2bc7c98c6b1a6d23267b98ca"
+    },
+    {
+      "file": "08-service-identity.png",
+      "width": 1440,
+      "height": 1737,
+      "bytes": 195837,
+      "sha256": "77e0d93ead99f6ef4a649fb021c594eb26729ac8b7ad5972843e3ee825907dc6"
+    },
+    {
+      "file": "09-proton-import-preview.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 165463,
+      "sha256": "c2b28676190129dab839217da2c3f746ab2ee39ec4eb583cc6348d8caec2bf34"
+    },
+    {
+      "file": "10-pgp-export.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 171851,
+      "sha256": "5d6c039a34943b4536fe196faf699436962e9fbdf3477a01447e19c035883e74"
+    },
+    {
+      "file": "11-users.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 47191,
+      "sha256": "a590450761bc58ee67e85a7d21c1daba33571a98e6374f0b951a6bd32ac2443e"
+    },
+    {
+      "file": "12-activity.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 207180,
+      "sha256": "f70fc834910d29e2244fad3817da78629ad937275f457652cd550e24effe6758"
+    },
+    {
+      "file": "13-account-settings.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 76020,
+      "sha256": "c47c8c3bc79044a84dbfdc6332778ce6ee864523ec275dabc8433ceedc1076a4"
+    },
+    {
+      "file": "14-vault-policy.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 75583,
+      "sha256": "7f3540d2aca8d8f8ae0502381cdadf864e58c61ad25a0f6edddae6ac3b405260"
+    },
+    {
+      "file": "15-ai-and-mcp.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 142200,
+      "sha256": "0c27b74df70c9cbb8a37f93a61bdbb61526cf126f9506549c0d6fda5d84acfae"
+    },
+    {
+      "file": "16-api-keys.png",
+      "width": 1440,
+      "height": 1100,
+      "bytes": 67903,
+      "sha256": "7f0d6052b5f996ba95d506009613480161fbc41407c12237cc6e62ba029e065b"
+    }
+  ]
+}

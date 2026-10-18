@@ -11,6 +11,19 @@ Stack: Go (chi + slog + sqlc), SQLite (WAL, embedded goose migrations),
 React frontend served by the same binary. One container, one volume, no
 external dependencies.
 
+## Documentation
+
+Start with the illustrated **[TrustIssues user guide](docs/USER-GUIDE.md)** for
+sign-in, Personal and shared vaults, adding credentials, client sharing, Proton
+Pass migration and PGP-encrypted exports. It includes step-by-step instructions
+and screenshots from an isolated instance with synthetic data.
+
+- [Administration and team guide](docs/ADMIN-GUIDE.md): account/vault roles,
+  client onboarding, MFA, API keys, rotation, audit review and settings.
+- [Security and automation guide](docs/SECURITY-AND-AUTOMATION-GUIDE.md): the
+  server trust model, AI/IDE proxy workflow, service identities and private access.
+- [Documentation index](docs/README.md): user guides and operator runbooks.
+
 ## Quickstart
 
 ```bash
@@ -77,8 +90,8 @@ also documents mixed public/private vault behavior and the break-glass runbook.
 | Role | Access |
 |---|---|
 | `admin` | Everything, including all vault entries, users, invitations, settings, activity log |
-| `user` | Own vault entries, own profile |
-| `vault_only` | Vault/client role; web onboarding and self-service Account/API-key settings, then browser-extension API-key auth |
+| `user` | Own Personal entries, accepted shared-vault membership, own profile and AI/MCP access subject to policy |
+| `vault_only` | Own Personal entries and accepted shared-vault membership; web onboarding and Account/API-key settings, then browser-extension API-key auth; no AI/MCP access |
 
 ## Development
 
@@ -249,9 +262,11 @@ service account.
 
 ## AI gateway and MCP (use AI while keeping secrets)
 
-Trustissues can act as a safe boundary between your team and Claude/OpenAI so an
-assistant or app gets the power of AI without ever holding a credential, and
-without leaking PII to the model.
+Trustissues can inject stored provider credentials into permitted requests
+server-side, so an assistant does not need the raw provider key. This depends
+on the configured routes and permissions. It is not a guarantee that arbitrary
+prompt content or upstream responses cannot expose sensitive information. See
+the [security and automation guide](docs/SECURITY-AND-AUTOMATION-GUIDE.md).
 
 **AI gateway.** An admin points a provider at a stored key in Settings > AI &
 MCP (each key is an `api_key` vault entry). Devs then aim their Anthropic or
@@ -260,9 +275,9 @@ OpenAI SDK at this instance instead of the provider:
 - base URL `https://<your-host>/api/ai/anthropic` (or `/api/ai/openai`)
 - authenticate with an API key from Settings > API keys (`X-API-Key` header)
 
-Trustissues injects the team's provider key server-side (the dev never holds
-it), tokenizes PII in the prompt through Shield before it egresses, resolves the
-markers in the response, and logs attributed usage. Non-streaming only in v1
+Trustissues injects the team's provider key server-side. When Shield is enabled,
+it tokenizes recognized structured PII in the prompt before it egresses and
+resolves the markers in the response. It logs attributed usage. Non-streaming only in v1
 (`"stream": false`).
 
 The gateway proxies **inference calls only**, and refuses anything else with
@@ -311,15 +326,18 @@ Minting is not open to `vault_only` either. That role comes out of the public
 invite endpoint and exists for the browser extension, so `/api/secrets/issue` and
 `/api/mcp` refuse it, the same way `/api/ai/*` already did.
 
-**MCP.** A remote MCP endpoint at `https://<your-host>/api/mcp` (JSON-RPC) that
-Claude and ChatGPT connectors can add, authenticated with an API key
+**MCP.** A remote endpoint at `https://<your-host>/api/mcp` (JSON-RPC over HTTP)
+for clients that support its transport, authenticated with an API key
 (`X-API-Key`). It exposes `list_secrets` (names only) and `use_secret` (mints a
 single-use, destination-bound capability token so the assistant acts with a
-secret it never sees, via `/proxy`). Tool results pass through Shield.
+secret it does not receive from the tool, via `/proxy`). MCP tool results are
+not blanket-redacted by Shield: entry names, proxy URLs and capability tokens
+remain visible to the connected assistant. Keep sensitive values out of names.
 
 **Shield.** Set `TRUSTISSUES_SHIELD_KEY` (exactly 32 bytes) to turn on
-LLM-boundary tokenization; leave it unset to pass data through unchanged. See
-`THREAT-MODEL.md` for exactly what Shield does and does not protect.
+gateway tokenization of recognized structured PII; leave it unset to pass data
+through unchanged. It is not a universal secret detector. See `THREAT-MODEL.md`
+for exactly what Shield does and does not protect.
 
 ## Browser extension setup
 

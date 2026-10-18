@@ -117,9 +117,11 @@ Native v1 import is deliberately fail-closed:
   client strings, never a request to decrypt stored bytes.
 
 Imported personal entries become the importer's entries. Each exported
-collection becomes a new private collection, with only the importer as an
-accepted manager; source memberships and roles are never recreated. Grouping is
-preserved through a source-to-new collection map.
+collection becomes a new copy with only the importer as an accepted manager;
+source memberships and roles are never recreated. Grouping is preserved through
+a source-to-new collection map. Native version 2 retains the collection's
+private-access policy; protected copies require the private route. Version 1
+defaults to Standard access. Proton conversion creates Standard access vaults.
 
 Auto-rotation is always disabled on import, even if the source requested it.
 Rotation targets are not imported. Review provider credentials and destinations
@@ -130,12 +132,13 @@ preserved for round-trip compatibility, but remain inert: no capability
 injection or provider destination defaults are created until local support
 exists and an operator reviews the entry.
 
-Trustissues refuses target-vault and within-file name conflicts instead of
-silently skipping or renaming secrets. Resolve the duplicate names in the
-source/destination and preview again. Because the current uniqueness rule is
-per importing user across personal and collection entries, a source document
-that legitimately contains the same name in two scopes cannot round-trip with
-those names unchanged until that schema rule is redesigned.
+Native Trustissues import refuses within-scope name conflicts instead of
+silently skipping or renaming secrets. Names can repeat in different vaults;
+duplicates within the same personal or shared source scope are rejected. Shared
+collections are newly created, so existing-name conflicts apply to imported
+Personal entries against that user's existing Personal entries. Resolve those
+conflicts and preview again. Proton conversion separately qualifies duplicate
+item names before handing its result to the native importer.
 
 The successful operation records `vault.native_imported` with bounded counts
 only. No entry names or values are placed in the audit detail.
@@ -144,8 +147,8 @@ only. No entry names or values are placed in the audit detail.
 
 Exporting an imported vault again preserves supported user-authored content and
 collection grouping. It does not reproduce the original database or authority:
-IDs are fresh, ownership belongs to the importer, collections are private
-copies, automations are inert, provider operational markers are gone, and
+IDs are fresh, ownership belongs to the importer, collections have no copied
+memberships, automations are inert, provider operational markers are gone, and
 instance-local credentials/audit history never enter the interchange file.
 
 That boundary is intentional. A portable password file must not also be a way
