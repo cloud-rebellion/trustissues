@@ -224,8 +224,10 @@ function AccountTab() {
         </h2>
         <form onSubmit={handleChangePassword} className="max-w-sm space-y-4">
           <div>
-            <label className={labelClass}>Current password</label>
+            <label htmlFor="account-current-password" className={labelClass}>Current password</label>
             <input
+              id="account-current-password"
+              name="current_password"
               type="password"
               value={passwordForm.current}
               onChange={(e) =>
@@ -237,8 +239,10 @@ function AccountTab() {
             />
           </div>
           <div>
-            <label className={labelClass}>New password</label>
+            <label htmlFor="account-new-password" className={labelClass}>New password</label>
             <input
+              id="account-new-password"
+              name="new_password"
               type="password"
               value={passwordForm.next}
               onChange={(e) =>
@@ -252,8 +256,10 @@ function AccountTab() {
             />
           </div>
           <div>
-            <label className={labelClass}>Confirm new password</label>
+            <label htmlFor="account-confirm-password" className={labelClass}>Confirm new password</label>
             <input
+              id="account-confirm-password"
+              name="confirm_password"
               type="password"
               value={passwordForm.confirm}
               onChange={(e) =>

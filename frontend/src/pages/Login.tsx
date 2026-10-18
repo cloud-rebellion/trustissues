@@ -1,7 +1,33 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { ApiError } from '@/lib/api';
 import { KeyRound, Loader2 } from 'lucide-react';
+
+function signInError(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 401) {
+      if (err.message === 'invalid credentials') {
+        return 'Email or password is incorrect. Check your saved sign-in details and try again.';
+      }
+      if (err.message === 'invalid 2FA code') {
+        return 'The two-factor or recovery code was not accepted. Enter a fresh authenticator code or an unused recovery code.';
+      }
+      return 'Sign-in was not accepted. Check your sign-in details and try again.';
+    }
+    if (err.status === 429) {
+      if (err.message.includes('15 minutes')) {
+        return 'Too many failed sign-in attempts. Try again in 15 minutes.';
+      }
+      return 'Too many sign-in attempts from this address. Wait before trying again.';
+    }
+    if (err.status === 503) {
+      return 'TrustIssues is temporarily busy. Wait a moment and try signing in again.';
+    }
+    return err.message;
+  }
+  return 'Could not sign in. Check your connection and try again.';
+}
 
 export default function Login() {
   const { login, isLoading, setupRequired, user } = useAuth();
@@ -18,6 +44,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [totpStep, setTotpStep] = useState(false);
   const [totpCode, setTotpCode] = useState('');
+
+  function clearSecondFactor() {
+    setTotpStep(false);
+    setTotpCode('');
+    setError('');
+  }
 
   if (isLoading) {
     return (
@@ -48,9 +80,8 @@ export default function Login() {
         return;
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Invalid email or password'
-      );
+      setError(signInError(err));
+      setTotpCode('');
     } finally {
       setLoading(false);
     }
@@ -79,7 +110,7 @@ export default function Login() {
           className="rounded-xl border border-slate-200 bg-white p-6"
         >
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -95,8 +126,12 @@ export default function Login() {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                clearSecondFactor();
+              }}
               required
+              disabled={loading}
               autoComplete="email"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
               placeholder="admin@example.com"
@@ -114,8 +149,12 @@ export default function Login() {
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearSecondFactor();
+              }}
               required
+              disabled={loading}
               autoComplete="current-password"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
               placeholder="Enter your password"
@@ -128,24 +167,26 @@ export default function Login() {
                 htmlFor="totp"
                 className="mb-1.5 block text-sm font-medium text-slate-700"
               >
-                Two-Factor Code
+                Two-factor or recovery code
               </label>
               <input
                 id="totp"
                 type="text"
-                inputMode="numeric"
+                inputMode="text"
                 autoComplete="one-time-code"
+                autoCapitalize="none"
+                spellCheck={false}
                 value={totpCode}
                 onChange={(e) => setTotpCode(e.target.value)}
                 required
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm tracking-widest outline-hidden transition-colors focus:border-slate-400 focus:ring-0"
                 placeholder="000000"
-                maxLength={8}
+                maxLength={16}
                 autoFocus
               />
               <p className="mt-1 text-xs text-slate-400">
-                Enter the 6-digit code from your authenticator app, or a
-                recovery code
+                Enter the 6-digit code from your authenticator app, or an unused
+                16-character recovery code.
               </p>
             </div>
           )}

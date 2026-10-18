@@ -28,6 +28,10 @@ type AuthHandler struct {
 	// hold two requests after their fast-path read and prove the database CAS is
 	// the authority. Production always uses passwordhash.Hash.
 	initialPasswordHasher func(string) (string, error)
+	// legacyPasswordHasher lets the regression interleave a password reset
+	// after legacy verification and before the rehash CAS, without timing races.
+	// Production always uses passwordhash.Hash.
+	legacyPasswordHasher func(string) (string, error)
 	// vault is optional and used only by ChangePassword to purge a caller's
 	// own rotation delivery targets as part of full credential invalidation.
 	// Wired by SetVault after construction, matching UserHandler; nil simply
@@ -37,7 +41,11 @@ type AuthHandler struct {
 
 // NewAuthHandler creates a new AuthHandler.
 func NewAuthHandler(queries *db.Queries, cfg *config.Config) *AuthHandler {
-	return &AuthHandler{queries: queries, cfg: cfg, initialPasswordHasher: passwordhash.Hash}
+	return &AuthHandler{
+		queries: queries, cfg: cfg,
+		initialPasswordHasher: passwordhash.Hash,
+		legacyPasswordHasher:  passwordhash.Hash,
+	}
 }
 
 // SetVault wires the vault handler used by ChangePassword to purge the
@@ -439,7 +447,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recordFailure := func() {
+	recordFailure := func(stage string) {
 		if dbErr := h.queries.CreateLoginAttempt(r.Context(), db.CreateLoginAttemptParams{
 			Email: req.Email, IpAddress: ip, Success: 0,
 			Scope: db.LoginAttemptScopePasswordLogin,
@@ -449,8 +457,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		// Surface failures in the audit trail alongside successful logins.
 		// Attributed to the resolved account with the attempted email + source
 		// IP in the detail so admins can spot targeted or brute-force attempts.
+		// Stage is a fixed call-site label, never a supplied credential. Keep it
+		// in the admin audit only: public errors must not reveal account state.
 		logAuthEvent(h.queries, r, &row.ID, "auth.login_failed",
-			fmt.Sprintf("Failed login for %s from %s", req.Email, ip))
+			fmt.Sprintf("Failed login for %s from %s stage=%s", req.Email, ip, stage))
 	}
 
 	ok, verifyErr := passwordhash.Verify(req.Password, row.PasswordHash)
@@ -460,27 +470,56 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if verifyErr != nil || !ok {
-		recordFailure()
+		recordFailure("password")
 		writeUnauthorized(w, r, "invalid credentials")
 		return
 	}
 
 	if row.Disabled != 0 {
-		recordFailure()
+		recordFailure("disabled")
 		writeForbidden(w, r, "account is disabled")
 		return
 	}
 
 	// Transparently upgrade legacy bcrypt hashes to argon2id on successful
-	// login. Failure to rehash is non-fatal: the login still succeeds and
-	// we'll retry on the next login.
+	// login. Failure to compute/store an upgrade is non-fatal. A concurrent
+	// password change must win over this opportunistic representation change.
 	if passwordhash.NeedsRehash(row.PasswordHash) {
-		if upgraded, hashErr := passwordhash.Hash(req.Password); hashErr == nil {
-			if dbErr := h.queries.UpdatePasswordHash(r.Context(), db.UpdatePasswordHashParams{
-				ID:           row.ID,
-				PasswordHash: upgraded,
-			}); dbErr != nil {
+		if upgraded, hashErr := h.legacyPasswordHasher(req.Password); hashErr == nil {
+			result, dbErr := h.queries.RehashPasswordIfUnchanged(r.Context(), db.RehashPasswordIfUnchangedParams{
+				UserID:               row.ID,
+				NewPasswordHash:      upgraded,
+				ExpectedPasswordHash: row.PasswordHash,
+			})
+			if dbErr != nil {
 				logError(r, "login: argon2id rehash failed", "error", dbErr, "user_id", row.ID)
+			} else {
+				changed, rowsErr := result.RowsAffected()
+				if rowsErr != nil {
+					logError(r, "login: failed to confirm password rehash", "error", rowsErr)
+					writeInternalError(w, r, "internal server error")
+					return
+				}
+				if changed == 0 {
+					// Another login may have upgraded the same password, or a
+					// human may have chosen a different one. Verify the current
+					// value before allowing a stale legacy login to proceed.
+					current, readErr := h.queries.GetPasswordHashByUserID(r.Context(), row.ID)
+					if readErr != nil {
+						logError(r, "login: failed to recheck current password", "error", readErr)
+						writeInternalError(w, r, "internal server error")
+						return
+					}
+					currentOK, currentErr := passwordhash.Verify(req.Password, current)
+					if capacityExhausted(w, r, currentErr, "auth.login") {
+						return
+					}
+					if currentErr != nil || !currentOK {
+						recordFailure("password")
+						writeUnauthorized(w, r, "invalid credentials")
+						return
+					}
+				}
 			}
 		}
 	}
@@ -513,7 +552,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			// 2FA bypass, so a code already redeemed and crossed off a printed list
 			// stayed a working second factor. See consumeRecoveryCode.
 			if !consumeRecoveryCode(r.Context(), h.queries, row.ID, req.TOTPCode) {
-				recordFailure()
+				recordFailure("mfa")
 				writeUnauthorized(w, r, "invalid 2FA code")
 				return
 			}
@@ -717,7 +756,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// SetPasswordHash, not UpdatePasswordHash: the owner is choosing this
+	// SetPasswordHash, not an opportunistic rehash: the owner is choosing this
 	// password themselves, which is exactly what password_set records. See
 	// migration 00043 and TOTPVerify.
 	if err := h.queries.SetPasswordHash(r.Context(), db.SetPasswordHashParams{

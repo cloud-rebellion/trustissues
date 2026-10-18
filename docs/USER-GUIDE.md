@@ -430,6 +430,9 @@ matching vault key material for disaster recovery. See [Backup](BACKUP.md).
 
 | What you see | What to check or do |
 |---|---|
+| Sign-in rejects email or password | Use the exact password most recently saved in TrustIssues Settings. Update the matching password-manager entry for the URL you use. A vault credential and a PGP export passphrase are separate from your account password. |
+| Sign-in rejects a two-factor code | Enter a fresh authenticator code or one complete unused 16-character recovery code. A rejected MFA code does not mean the password was incorrect. |
+| Sign-in says too many attempts | Stop retrying and follow the displayed waiting period. Failed password and MFA attempts share the sign-in lockout; changing your password does not bypass this protection. |
 | “Personal already exists, but how do I add a password?” | Select Personal, unlock, then Add credential. You do not need New vault. |
 | A new vault is empty | Creation only made a grouping. Select it and save a credential into its Vault field. |
 | Add credential is disabled | Check for viewer access, a locked vault or a collection-loading error. |
@@ -445,7 +448,7 @@ matching vault key material for disaster recovery. See [Backup](BACKUP.md).
 | You lost an MFA device | Use a saved recovery code. Ask an administrator to follow the recovery runbook if those are unavailable. |
 
 When reporting a problem, share the action, file format, approximate item count,
-error wording and relevant release version. Do not include secret values,
+error wording, whether it happened before or after the MFA prompt, and relevant release version. Do not include secret values,
 private keys, account passwords, recovery codes or full credential exports in a
 support message or screenshot.
 

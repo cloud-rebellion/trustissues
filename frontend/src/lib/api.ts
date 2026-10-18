@@ -165,6 +165,18 @@ async function apiRequest(
     if (!skipAuthRedirect) {
       onUnauthorized?.();
     }
+    // A sign-in refusal is not an expired session. Keep the server's password
+    // versus second-factor distinction so a rejected code does not send the
+    // owner into another password reset. Other authenticated 401s retain the
+    // session invalidation above and their existing error contract.
+    if (path === '/auth/login') {
+      const body = await res.json().catch(() => undefined) as
+        { error?: unknown } | undefined;
+      const message = typeof body?.error === 'string'
+        ? body.error
+        : 'Sign-in was not accepted. Please try again.';
+      throw new ApiError(message, 401, body);
+    }
     throw new ApiError('Unauthorized', 401);
   }
 
@@ -269,6 +281,7 @@ export const api = {
     login: (email: string, password: string, totpCode?: string) =>
       request<AuthResponse>('/auth/login', {
         method: 'POST',
+        skipAuthRedirect: true,
         body: JSON.stringify({
           email,
           password,

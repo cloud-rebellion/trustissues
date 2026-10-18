@@ -45,15 +45,16 @@ SELECT password_hash FROM users WHERE id = ?;
 -- name: GetUserEmailByID :one
 SELECT email FROM users WHERE id = ?;
 
--- name: UpdatePasswordHash :exec
--- Rewrites the hash only. Its one caller outside SetPasswordHash is the
--- transparent bcrypt-to-argon2id rehash on a successful login: that rewrites
--- the hash of a password the owner just typed, it does not set a new one, so
--- it must not touch password_set. See SetPasswordHash for the paths that do.
-UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
+-- name: RehashPasswordIfUnchanged :execresult
+-- An opportunistic legacy-hash upgrade may only replace the hash it verified.
+-- A concurrent password change/reset must win over a stale login's rehash.
+-- This upgrades the representation only, preserving password_set and session
+-- revocation state. Human-chosen passwords use SetPasswordHash instead.
+UPDATE users SET password_hash = sqlc.arg(new_password_hash), updated_at = CURRENT_TIMESTAMP
+WHERE id = sqlc.arg(user_id) AND password_hash = sqlc.arg(expected_password_hash);
 
 -- name: SetPasswordHash :exec
--- Same write as UpdatePasswordHash, plus marking password_set so TOTPVerify
+-- Sets a human-chosen password and marks password_set so TOTPVerify
 -- knows this account's owner can actually supply a password. Use this from
 -- every path where a HUMAN is choosing the new password: change-password,
 -- admin reset-password, and invitation redemption when a password was

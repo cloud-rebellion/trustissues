@@ -145,6 +145,8 @@ Keep recovery codes outside this vault so they remain accessible if you cannot s
 
 On later sign-ins, submit email and password, then enter the current authenticator code or a recovery code and select **Verify**. A recovery code provides a way back in when the authenticator is unavailable.
 
+Recovery codes contain 16 characters and are single-use. Paste the complete code. If an authenticator code has already been used, wait for the next code instead of retrying the same one. Password and MFA failures count toward the same sign-in lockout. New `auth.login_failed` audit entries identify the failure stage without recording passwords or codes. Older entries do not distinguish these stages, so they cannot establish that the password itself was wrong.
+
 If the administrator requires MFA and you have not enrolled, you can still sign in to finish setup, but vault operations and API-key creation remain blocked. Follow the enrollment banner to Account settings. Disabling MFA requires your password and a TOTP or recovery code; a mandatory-MFA policy prevents disabling it until an administrator changes that policy.
 
 ## API keys and browser-extension connection

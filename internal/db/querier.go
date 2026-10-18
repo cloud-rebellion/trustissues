@@ -806,6 +806,11 @@ type Querier interface {
 	// derive the readers' windows from this file and prove the constant exceeds all
 	// of them.
 	PruneLoginAttempts(ctx context.Context, datetime interface{}) (sql.Result, error)
+	// An opportunistic legacy-hash upgrade may only replace the hash it verified.
+	// A concurrent password change/reset must win over a stale login's rehash.
+	// This upgrades the representation only, preserving password_set and session
+	// revocation state. Human-chosen passwords use SetPasswordHash instead.
+	RehashPasswordIfUnchanged(ctx context.Context, arg RehashPasswordIfUnchangedParams) (sql.Result, error)
 	RekeyInvitationCode(ctx context.Context, arg RekeyInvitationCodeParams) error
 	RekeyNotificationChannelConfig(ctx context.Context, arg RekeyNotificationChannelConfigParams) error
 	RemoveCollectionMember(ctx context.Context, arg RemoveCollectionMemberParams) (sql.Result, error)
@@ -915,7 +920,7 @@ type Querier interface {
 	// zero before either expensive hash finishes. This compare-and-set makes one
 	// request the winner and prevents the later request overwriting its password.
 	SetInitialPasswordHash(ctx context.Context, arg SetInitialPasswordHashParams) (sql.Result, error)
-	// Same write as UpdatePasswordHash, plus marking password_set so TOTPVerify
+	// Sets a human-chosen password and marks password_set so TOTPVerify
 	// knows this account's owner can actually supply a password. Use this from
 	// every path where a HUMAN is choosing the new password: change-password,
 	// admin reset-password, and invitation redemption when a password was
@@ -936,11 +941,6 @@ type Querier interface {
 	UpdateCollection(ctx context.Context, arg UpdateCollectionParams) error
 	UpdateLoginAttemptEmailForCanonicalMigration(ctx context.Context, arg UpdateLoginAttemptEmailForCanonicalMigrationParams) error
 	UpdateNotificationChannelEnabled(ctx context.Context, arg UpdateNotificationChannelEnabledParams) (sql.Result, error)
-	// Rewrites the hash only. Its one caller outside SetPasswordHash is the
-	// transparent bcrypt-to-argon2id rehash on a successful login: that rewrites
-	// the hash of a password the owner just typed, it does not set a new one, so
-	// it must not touch password_set. See SetPasswordHash for the paths that do.
-	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
 	UpdateRecoveryCodes(ctx context.Context, arg UpdateRecoveryCodesParams) error
 	UpdateUserName(ctx context.Context, arg UpdateUserNameParams) error
 	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) (sql.Result, error)

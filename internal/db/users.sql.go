@@ -450,6 +450,25 @@ func (q *Queries) ListUsersWithTOTPSecret(ctx context.Context) ([]ListUsersWithT
 	return items, nil
 }
 
+const rehashPasswordIfUnchanged = `-- name: RehashPasswordIfUnchanged :execresult
+UPDATE users SET password_hash = ?1, updated_at = CURRENT_TIMESTAMP
+WHERE id = ?2 AND password_hash = ?3
+`
+
+type RehashPasswordIfUnchangedParams struct {
+	NewPasswordHash      string `json:"new_password_hash"`
+	UserID               string `json:"user_id"`
+	ExpectedPasswordHash string `json:"expected_password_hash"`
+}
+
+// An opportunistic legacy-hash upgrade may only replace the hash it verified.
+// A concurrent password change/reset must win over a stale login's rehash.
+// This upgrades the representation only, preserving password_set and session
+// revocation state. Human-chosen passwords use SetPasswordHash instead.
+func (q *Queries) RehashPasswordIfUnchanged(ctx context.Context, arg RehashPasswordIfUnchangedParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, rehashPasswordIfUnchanged, arg.NewPasswordHash, arg.UserID, arg.ExpectedPasswordHash)
+}
+
 const setInitialPasswordHash = `-- name: SetInitialPasswordHash :execresult
 UPDATE users
 SET password_hash = ?, password_set = 1, updated_at = CURRENT_TIMESTAMP
@@ -479,7 +498,7 @@ type SetPasswordHashParams struct {
 	ID           string `json:"id"`
 }
 
-// Same write as UpdatePasswordHash, plus marking password_set so TOTPVerify
+// Sets a human-chosen password and marks password_set so TOTPVerify
 // knows this account's owner can actually supply a password. Use this from
 // every path where a HUMAN is choosing the new password: change-password,
 // admin reset-password, and invitation redemption when a password was
@@ -536,24 +555,6 @@ type StoreTOTPSecretParams struct {
 
 func (q *Queries) StoreTOTPSecret(ctx context.Context, arg StoreTOTPSecretParams) error {
 	_, err := q.db.ExecContext(ctx, storeTOTPSecret, arg.TotpSecret, arg.ID)
-	return err
-}
-
-const updatePasswordHash = `-- name: UpdatePasswordHash :exec
-UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
-`
-
-type UpdatePasswordHashParams struct {
-	PasswordHash string `json:"password_hash"`
-	ID           string `json:"id"`
-}
-
-// Rewrites the hash only. Its one caller outside SetPasswordHash is the
-// transparent bcrypt-to-argon2id rehash on a successful login: that rewrites
-// the hash of a password the owner just typed, it does not set a new one, so
-// it must not touch password_set. See SetPasswordHash for the paths that do.
-func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
-	_, err := q.db.ExecContext(ctx, updatePasswordHash, arg.PasswordHash, arg.ID)
 	return err
 }
 
