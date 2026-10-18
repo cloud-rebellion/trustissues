@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   Activity,
+  BookOpen,
   KeyRound,
   ShieldCheck,
   Lock,
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   },
   { to: '/users', icon: Users, label: 'Users', adminOnly: true },
   { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/documentation', icon: BookOpen, label: 'Documentation' },
 ];
 
 export default function Sidebar() {
@@ -42,7 +44,7 @@ export default function Sidebar() {
   // only place to mint the browser-extension API key, which is the whole point
   // of the role.
   const items = isVaultOnly
-    ? navItems.filter((item) => item.to === '/vault' || item.to === '/settings')
+    ? navItems.filter((item) => item.to === '/vault' || item.to === '/settings' || item.to === '/documentation')
     : navItems.filter((item) => !item.adminOnly || isAdmin);
 
   return (

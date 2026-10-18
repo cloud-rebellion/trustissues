@@ -24,8 +24,8 @@ export default function Layout({ children }: LayoutProps) {
           This banner is not decoration any more. As of the enrolment gate
           (internal/middleware/totp_enrollment.go) the server refuses every
           route except /api/auth while this flag is set, so a flagged user can
-          reach exactly two things: this banner and the enrolment form it links
-          to. Every other page will show its own error. Keep the link working
+          reach the enrolment form and the read-only documentation explaining
+          it. Credential operations stay gated. Keep the link working
           and keep it pointing at a tab whose data comes only from /api/auth --
           it is the sole way out of the gate.
         */}

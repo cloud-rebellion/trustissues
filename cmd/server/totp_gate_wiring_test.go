@@ -412,6 +412,13 @@ type routeExemption struct {
 
 var routeExemptions = []routeExemption{
 	{
+		pattern: "/api/documentation/*",
+		why: "read-only, explicitly allowlisted documentation embedded in the server binary. " +
+			"Accounts still enrolling in MFA need the instructions. This route retains " +
+			"JWTOrAPIKeyAuth and exposes no vault or runtime data; " +
+			"TestDocumentationRouteRequiresAuthButNotEnrollment pins that boundary.",
+	},
+	{
 		pattern: "/health",
 		why:     "liveness probe. Must answer with no credential of any kind so an orchestrator can tell a broken instance apart from a healthy one and restart it; carries no data.",
 	},
@@ -461,6 +468,22 @@ var routeExemptions = []routeExemption{
 			"not because this comment says so.",
 		verify: serviceSecretsInHandlerCheckExists,
 	},
+}
+
+func TestDocumentationRouteRequiresAuthButNotEnrollment(t *testing.T) {
+	seen := false
+	for _, route := range buildRealRouterRoutes(t) {
+		if route.pattern != "/api/documentation/*" {
+			continue
+		}
+		if route.method != http.MethodGet || !route.hasAuth || route.gated {
+			t.Fatalf("documentation route = %+v; want GET with account authentication and no enrollment gate", route)
+		}
+		seen = true
+	}
+	if !seen {
+		t.Fatal("authenticated documentation route is missing")
+	}
 }
 
 func findExemption(pattern string) *routeExemption {

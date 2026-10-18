@@ -14,6 +14,7 @@ const CredentialAccessPage = lazy(() => import('@/pages/CredentialAccess'));
 const UsersPage = lazy(() => import('@/pages/Users'));
 const SettingsPage = lazy(() => import('@/pages/Settings'));
 const ClientOnboardingPage = lazy(() => import('@/pages/ClientOnboarding'));
+const DocumentationPage = lazy(() => import('@/pages/Documentation'));
 
 function PageLoader() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/invite" element={<Invite />} />
+          <Route path="/documentation/:guide?" element={<AuthGuard><DocumentationPage /></AuthGuard>} />
           <Route
             path="/client-onboarding"
             element={

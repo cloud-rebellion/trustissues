@@ -22,6 +22,7 @@ import (
 	"syscall"
 	"time"
 
+	documentation "github.com/bright-interaction/trustissues"
 	"github.com/bright-interaction/trustissues/internal/alerts"
 	"github.com/bright-interaction/trustissues/internal/config"
 	"github.com/bright-interaction/trustissues/internal/database"
@@ -826,6 +827,12 @@ func newRouter(d routerDeps) *chi.Mux {
 		r.Group(func(r chi.Router) {
 			r.Use(timw.JWTOrAPIKeyAuth(d.cfg.JWTSecret, d.dbConn))
 
+			// Read-only product guidance is available to every signed-in role,
+			// including an account that still needs to enroll in MFA. The
+			// handler exposes only its reviewed embedded documentation inventory;
+			// it has no database, vault, or runtime-filesystem access.
+			r.Get("/documentation/*", http.StripPrefix("/api/documentation", documentation.Handler()).ServeHTTP)
+
 			// Auth/self-service (available to every role incl. vault_only).
 			r.Route("/auth", func(r chi.Router) {
 				r.Get("/me", d.authHandler.Me)
@@ -852,7 +859,9 @@ func newRouter(d routerDeps) *chi.Mux {
 			//
 			// /api/auth above is deliberately OUTSIDE it: enrolling is how a
 			// user gets past the gate, so gating enrolment would lock out every
-			// un-enrolled account the moment the policy is switched on. Putting
+			// un-enrolled account the moment the policy is switched on. The
+			// read-only documentation route is also outside it so those accounts
+			// can read the setup instructions. Putting
 			// the exemption here, as a route group, rather than in a list of
 			// exempt paths inside the middleware, is what makes a route added
 			// below gated by DEFAULT. See RequireTOTPEnrollment.

@@ -22,6 +22,63 @@ body {
   @apply bg-slate-50 text-slate-900 antialiased;
 }
 
+/* Documentation uses the same authored Markdown as the repository. */
+.documentation-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; align-items: start; }
+.documentation-navigation { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; padding-right: 8px; }
+.documentation-content { min-width: 0; border: 1px solid #e2e8f0; border-radius: 12px; background: white; padding: 32px; color: #334155; font-size: 15px; line-height: 1.85; overflow-wrap: anywhere; }
+.documentation-content > :first-child { margin-top: 0; }
+.documentation-content h1, .documentation-content h2, .documentation-content h3, .documentation-content h4 { color: #0f172a; font-weight: 650; line-height: 1.4; scroll-margin-top: 24px; }
+.documentation-content h1 { font-size: 28px; margin: 0 0 24px; letter-spacing: -.025em; }
+.documentation-content h2 { font-size: 21px; margin: 40px 0 16px; border-top: 1px solid #e2e8f0; padding-top: 28px; }
+.documentation-content h3 { font-size: 17px; margin: 28px 0 12px; }
+.documentation-content h4 { font-size: 15px; margin: 24px 0 10px; }
+.documentation-content p { margin: 14px 0; }
+.documentation-content strong { color: #0f172a; font-weight: 650; }
+.documentation-content a:not(.doc-screenshot) { color: #1d4ed8; text-decoration: underline; text-underline-offset: 3px; }
+.documentation-content a:focus-visible { outline: 2px solid #2563eb; outline-offset: 4px; }
+.documentation-content ul, .documentation-content ol { margin: 16px 0; padding-left: 25px; }
+.documentation-content ul { list-style: disc; }
+.documentation-content ol { list-style: decimal; }
+.documentation-content li { margin: 8px 0; padding-left: 3px; }
+.documentation-content li > p { margin: 8px 0; }
+.documentation-content code { border-radius: 4px; background: #f1f5f9; padding: 2px 5px; font-size: .85em; }
+.documentation-content pre { overflow-x: auto; margin: 22px 0; border-radius: 8px; background: #0f172a; padding: 20px; color: #e2e8f0; line-height: 1.65; }
+.documentation-content pre code { padding: 0; background: transparent; color: inherit; }
+.documentation-content blockquote { margin: 24px 0; border-left: 3px solid #94a3b8; padding: 4px 20px; color: #475569; }
+.documentation-content hr { margin: 32px 0; border-color: #e2e8f0; }
+.doc-table { overflow-x: auto; margin: 24px 0; border: 1px solid #e2e8f0; border-radius: 8px; }
+.doc-table table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.7; }
+.doc-table th { background: #f8fafc; color: #0f172a; font-weight: 650; text-align: left; }
+.doc-table th, .doc-table td { min-width: 110px; padding: 12px 14px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+.doc-table tr:last-child td { border-bottom: 0; }
+.doc-external { display: inline; width: 11px; height: 11px; margin-left: 4px; vertical-align: baseline; }
+.doc-screenshot { display: block; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 9px; margin: 24px 0 8px; color: #475569; background: #f8fafc; text-decoration: none; }
+.doc-screenshot img { display: block; width: 100%; height: auto; }
+.doc-screenshot > span { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; font-size: 12px; border-top: 1px solid #e2e8f0; }
+.doc-screenshot svg { width: 14px; height: 14px; }
+.doc-sequence { border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 8px; padding: 20px; margin: 24px 0; }
+.doc-sequence figcaption { color: #0f172a; font-weight: 650; }
+.doc-sequence li { padding: 8px; }
+.doc-sequence li div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+.doc-sequence svg { width: 15px; height: 15px; color: #64748b; }
+.doc-sequence p { font-size: 13px; }
+@media (max-width: 1100px) {
+  .documentation-layout { grid-template-columns: minmax(0, 1fr); }
+  .documentation-navigation { position: static; max-height: none; }
+  .documentation-navigation nav[aria-label="Guides"] { display: flex; flex-wrap: wrap; gap: 4px; }
+  .documentation-navigation nav[aria-label="On this page"] { display: none; }
+  .documentation-content { padding: 24px; }
+}
+@media print {
+  body:has(.documentation-content) aside, .documentation-navigation, .doc-print { display: none !important; }
+  body:has(.documentation-content) main { padding-left: 0; }
+  .documentation-layout { display: block; }
+  .documentation-content { border: 0; padding: 0; font-size: 11pt; }
+  .doc-screenshot, .doc-sequence { break-inside: avoid; }
+  .doc-screenshot > span { display: none; }
+  .documentation-content pre { white-space: pre-wrap; }
+}
+
 /* Global select styling: consistent custom chevron across all dropdowns */
 select {
   appearance: none;
