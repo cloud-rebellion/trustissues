@@ -128,7 +128,10 @@ fi
 RESIDUE_MARKER="CLEARTEXT-VAULT-NAME-MARKER"
 make_db_with_residue() {
   rm -f "$1" "$1-wal" "$1-shm"
-  sqlite3 "$1" "PRAGMA journal_mode=WAL;
+  # This synthetic fixture models old residue even when the SQLite build
+  # defaults to secure-delete. The production setting remains unchanged.
+  sqlite3 "$1" "PRAGMA secure_delete=OFF;
+                PRAGMA journal_mode=WAL;
                 CREATE TABLE vault_entries (id TEXT PRIMARY KEY, name TEXT);
                 WITH RECURSIVE c(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM c WHERE i<2000)
                   INSERT INTO vault_entries(id,name)
@@ -248,6 +251,86 @@ if [ -e "${DATAB}/trustissues.db-shm" ] || [ -e "${DATAB}/trustissues.db-wal" ];
   bad "the dry run left sidecars behind: $(ls "${DATAB}" | tr '\n' ' ')"
 else
   ok "the dry run created no -wal/-shm sidecars"
+fi
+
+# A concurrent writer is not excluded merely because a WAL was absent at the
+# start. Inject changes at the actual bounded header-read boundary and require
+# refusal, rather than returning plausible stale counts or opening SQLite.
+PROBE_BIN="${WORK}/probe-bin"; mkdir -p "${PROBE_BIN}"
+PROBE_REAL_OD="$(command -v od)"
+cat > "${PROBE_BIN}/od" <<'PROBE_OD'
+#!/usr/bin/env bash
+set -euo pipefail
+"${TI_PROBE_REAL_OD}" "$@"
+case " $* " in
+  *' -N100 '*)
+    if [ ! -e "${TI_PROBE_MARKER}" ]; then
+      : > "${TI_PROBE_MARKER}"
+      case "${TI_PROBE_MODE}" in
+        wal) printf 'synthetic concurrent WAL\n' > "${TI_PROBE_DB}-wal" ;;
+        journal) printf 'synthetic concurrent journal\n' > "${TI_PROBE_DB}-journal" ;;
+        replace) mv "${TI_PROBE_REPLACEMENT}" "${TI_PROBE_DB}" ;;
+        header) printf '\000\003' | dd of="${TI_PROBE_DB}" bs=1 seek=16 conv=notrunc 2>/dev/null ;;
+      esac
+    fi ;;
+esac
+PROBE_OD
+chmod +x "${PROBE_BIN}/od"
+for mode in wal journal replace header; do
+  race_dir="${WORK}/probe-race-${mode}"; mkdir -p "${race_dir}"
+  make_db_with_residue "${race_dir}/trustissues.db"
+  # An identical byte copy makes inode identity, not different header contents,
+  # the distinguishing evidence for the replacement case. Only synthetic data.
+  cp "${race_dir}/trustissues.db" "${race_dir}/replacement.db"
+  race_rc=0
+  race_out="$(PATH="${PROBE_BIN}:${PATH}" TI_PROBE_REAL_OD="${PROBE_REAL_OD}" \
+    TI_PROBE_MODE="${mode}" TI_PROBE_MARKER="${race_dir}/observed" \
+    TI_PROBE_DB="${race_dir}/trustissues.db" TI_PROBE_REPLACEMENT="${race_dir}/replacement.db" \
+    TRUSTISSUES_DATA_DIR="${race_dir}" "${HERE}/compact-db.sh" 2>&1)" || race_rc=$?
+  if [ "$race_rc" -ne 0 ] && [ -f "${race_dir}/observed" ] &&
+     ! printf '%s\n' "$race_out" | grep -q '^free pages:'; then
+    ok "dry-run refuses concurrent ${mode} change without claiming counters"
+  else
+    bad "dry-run accepted or did not exercise concurrent ${mode} change (exit ${race_rc})"
+  fi
+done
+
+# Corrupt file headers must refuse instead of producing reassuring counters.
+# Each mutation is made only in a purpose-built fixture, never in a real vault.
+HEADER_DIR="${WORK}/probe-corrupt-header"; mkdir -p "${HEADER_DIR}"
+make_db "${HEADER_DIR}/source.db"
+for mode in magic short page-size journal-version all-pages-free overflow-free partial-page; do
+  header_case="${HEADER_DIR}/${mode}"; mkdir -p "$header_case"
+  cp "${HEADER_DIR}/source.db" "${header_case}/trustissues.db"
+  case "$mode" in
+    magic) printf X | dd of="${header_case}/trustissues.db" bs=1 seek=0 conv=notrunc 2>/dev/null ;;
+    short) dd if="${HEADER_DIR}/source.db" of="${header_case}/trustissues.db" bs=1 count=99 2>/dev/null ;;
+    page-size) printf '\000\003' | dd of="${header_case}/trustissues.db" bs=1 seek=16 conv=notrunc 2>/dev/null ;;
+    journal-version) printf '\003' | dd of="${header_case}/trustissues.db" bs=1 seek=18 conv=notrunc 2>/dev/null ;;
+    all-pages-free)
+      pages="$(sqlite3 "${HEADER_DIR}/source.db" 'PRAGMA page_count;')"
+      octal="$(printf '\\%03o\\%03o\\%03o\\%03o' "$((pages >> 24 & 255))" "$((pages >> 16 & 255))" "$((pages >> 8 & 255))" "$((pages & 255))")"
+      printf '%b' "$octal" | dd of="${header_case}/trustissues.db" bs=1 seek=36 conv=notrunc 2>/dev/null ;;
+    overflow-free) printf '\377\377\377\377' | dd of="${header_case}/trustissues.db" bs=1 seek=36 conv=notrunc 2>/dev/null ;;
+    partial-page) printf X >> "${header_case}/trustissues.db" ;;
+  esac
+  header_rc=0
+  header_out="$(TRUSTISSUES_DATA_DIR="$header_case" "${HERE}/compact-db.sh" 2>&1)" || header_rc=$?
+  if [ "$header_rc" -ne 0 ] && ! printf '%s\n' "$header_out" | grep -q '^free pages:'; then
+    ok "dry-run refuses corrupt ${mode} header without claiming counters"
+  else
+    bad "dry-run accepted corrupt ${mode} header (exit ${header_rc})"
+  fi
+done
+# SQLite encodes 65536-byte pages as 1 in the two-byte header field.
+HEADER_BIG="${WORK}/probe-large-page"; mkdir -p "$HEADER_BIG"
+sqlite3 "${HEADER_BIG}/trustissues.db" 'PRAGMA page_size=65536; CREATE TABLE fixture (v);'
+header_big_rc=0
+header_big_out="$(TRUSTISSUES_DATA_DIR="$HEADER_BIG" "${HERE}/compact-db.sh" 2>&1)" || header_big_rc=$?
+if [ "$header_big_rc" -eq 0 ] && printf '%s\n' "$header_big_out" | grep -q '^free pages: *0 x 65536B '; then
+  ok 'dry-run observes the valid 65536-byte page-size encoding'
+else
+  bad "dry-run rejected the valid large-page header (exit ${header_big_rc})"
 fi
 
 # 2c. The default is a DRY RUN. This script rewrites the only live copy of the
