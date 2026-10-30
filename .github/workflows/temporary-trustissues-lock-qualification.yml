@@ -1,0 +1,151 @@
+name: temporary TrustIssues lock qualification
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  metadata:
+    if: github.repository == 'cloud-rebellion/trustissues' && github.head_ref == 'ci/trustissues-backup-observation-20261030'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: a2701d115a0ea71a8acaa54f296e968df5f2d626
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.22.2"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: "1.4.4"
+      - name: Generate reviewed lock, verify frozen install, and require high audit
+        id: qualify
+        env:
+          QUALIFICATION_OUT: ${{ runner.temp }}/trustissues-lock-qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY_CHECK'
+          import hashlib
+          from pathlib import Path
+          expected = {'package.json': 'f1760052ac22e286cdfc606f1e88105a50fda8b32a4f885c3b26d65eb6de70e7', 'bun.lock': '457bb6038fc4dfaea479e4849729f4f47e92c0a8b5cfbdc784f5244b42326769'}
+          for name, digest in expected.items():
+              path = Path('frontend') / name
+              assert path.is_file() and not path.is_symlink()
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == digest, 'baseline source drift'
+          PY_CHECK
+          mkdir -p "$QUALIFICATION_OUT"
+          cp frontend/bun.lock "$QUALIFICATION_OUT/bun.lock"
+          cat > "$QUALIFICATION_OUT/package.json" <<'PACKAGE_JSON'
+          {
+            "name": "trustissues-frontend",
+            "private": true,
+            "version": "0.1.0",
+            "type": "module",
+            "scripts": {
+              "dev": "vite",
+              "build": "tsc && vite build",
+              "preview": "vite preview",
+              "test": "vitest run",
+              "test:watch": "vitest"
+            },
+            "dependencies": {
+              "@tanstack/react-query": "^5.97.0",
+              "clsx": "^2.1.1",
+              "lucide-react": "^0.475.0",
+              "qrcode.react": "^4.2.0",
+              "react": "^19.0.0",
+              "react-dom": "^19.0.0",
+              "react-hot-toast": "^2.6.0",
+              "react-router-dom": "^7.18.2"
+            },
+            "devDependencies": {
+              "@testing-library/jest-dom": "^7.0.0",
+              "@testing-library/react": "^16.3.2",
+              "@testing-library/user-event": "^14.6.1",
+              "@types/node": "^26.1.2",
+              "@types/react": "^19.0.0",
+              "@types/react-dom": "^19.0.0",
+              "@vitejs/plugin-react": "^4.3.4",
+              "@vitest/coverage-v8": "^4.1.10",
+              "autoprefixer": "^10.5.0",
+              "jsdom": "^30.0.1",
+              "postcss": "^8.5.14",
+              "tailwindcss": "^3.4.19",
+              "typescript": "^6.0.0",
+              "vite": "^8.1.4",
+              "vitest": "^4.1.10"
+            },
+            "overrides": {
+              "postcss": "^8.5.14",
+              "picomatch": "^4.0.4",
+              "nanoid": "^3.3.18",
+              "browserslist": "^4.28.7",
+              "source-map-js": "^1.2.2",
+              "undici": "^8.12.2",
+              "vite": "8.1.6"
+            }
+          }
+          PACKAGE_JSON
+          cd "$QUALIFICATION_OUT"
+          python3 - <<'PY_CANDIDATE'
+          import hashlib
+          from pathlib import Path
+          assert hashlib.sha256(Path('package.json').read_bytes()).hexdigest() == '37542a31693ed0976505f59521a5ee7acd306020cae89b5301f27a7721bede8f'
+          PY_CANDIDATE
+          test "$(bun --version)" = '1.4.4'
+          test "$(node --version)" = 'v24.22.2'
+          bun install --lockfile-only --ignore-scripts
+          sha256sum bun.lock > "$RUNNER_TEMP/trustissues-lock-before-frozen.sha256"
+          bun install --frozen-lockfile --ignore-scripts
+          sha256sum -c "$RUNNER_TEMP/trustissues-lock-before-frozen.sha256"
+          set +e
+          bun audit --audit-level=high --json > audit.json
+          QUALIFICATION_AUDIT_RC=$?
+          set -e
+          export QUALIFICATION_AUDIT_RC
+          python3 - <<'PY_RECEIPT'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          output = {'baseline_public_head': 'a2701d115a0ea71a8acaa54f296e968df5f2d626', 'candidate_package_sha256': '37542a31693ed0976505f59521a5ee7acd306020cae89b5301f27a7721bede8f', 'bun_version': subprocess.check_output(['bun', '--version'], text=True).strip(), 'node_version': subprocess.check_output(['node', '--version'], text=True).strip(), 'frozen_install_lock_unchanged': True, 'lifecycle_scripts_executed': False, 'high_audit_exit_code': int(os.environ['QUALIFICATION_AUDIT_RC']), 'scope': 'lock generation/frozen-install metadata and audit only; not product build, tests, browser or runtime acceptance'}
+          output['files'] = {name: {'bytes': Path(name).stat().st_size, 'sha256': hashlib.sha256(Path(name).read_bytes()).hexdigest()} for name in ('package.json', 'bun.lock', 'audit.json')}
+          Path('qualification.json').write_text(json.dumps(output, indent=2) + chr(10))
+          PY_RECEIPT
+          exit "$QUALIFICATION_AUDIT_RC"
+      - name: Bound qualification artifacts
+        id: bound
+        if: always()
+        env:
+          QUALIFICATION_OUT: ${{ runner.temp }}/trustissues-lock-qualification
+        run: |
+          python3 - <<'PY_BOUND'
+          import os
+          from pathlib import Path
+          root = Path(os.environ['QUALIFICATION_OUT'])
+          names = ('package.json', 'bun.lock', 'audit.json', 'qualification.json')
+          total = 0
+          for name in names:
+              path = root / name
+              assert path.is_file() and not path.is_symlink(), 'missing regular qualification artifact'
+              size = path.stat().st_size
+              assert size <= 1048576, 'qualification artifact exceeded1MiB'
+              total += size
+          assert total <= 2097152, 'qualification artifact packet exceeded2MiB'
+          PY_BOUND
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always() && steps.bound.outcome == 'success'
+        with:
+          name: trustissues-lock-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/trustissues-lock-qualification/package.json
+            ${{ runner.temp }}/trustissues-lock-qualification/bun.lock
+            ${{ runner.temp }}/trustissues-lock-qualification/audit.json
+            ${{ runner.temp }}/trustissues-lock-qualification/qualification.json
+          retention-days: 1
+          if-no-files-found: error
