@@ -14,15 +14,14 @@ RUN bun run build
 # image shipped depended on whether the base layer happened to be evicted
 # before that build -- decidable only by reading the binary afterwards, and
 # recorded nowhere. This makes it a property of the repository instead.
-# 1.26.6 is the version measured to clear every stdlib advisory govulncheck
-# reports as reachable from this module.
+# Go1.26.10 includes the October2026 standard-library security corrections.
 #
 # Held in lockstep with go.mod's `go` directive -- NOT a `toolchain` line,
 # which this module deliberately no longer carries because it is inert under
 # the GOTOOLCHAIN=local that every official golang image bakes in -- and with
 # the go-version pin in .github/workflows/ci.yml. internal/buildpins asserts
 # all three agree and refuses if any drifts.
-FROM golang:1.26.6-alpine@sha256:3889b425f035be855a72fb4755265311293b6d414521f0a519d819df32222d83 AS builder
+FROM golang:1.26.10-alpine@sha256:9ce231b28998b32e116927c61aa5c406183061d4f3f2d61b292c88e7f6bdf7ca AS builder
 RUN apk add --no-cache gcc musl-dev sqlite-dev
 WORKDIR /app
 COPY go.mod go.sum ./
