@@ -187,11 +187,70 @@ header_journal_mode() {
 }
 
 # probe_counters - print "<page_size> <freelist_count> <journal_mode> <how>",
-# or fail with the reason in PROBE_ERR. All three values come from ONE
-# connection so they cannot disagree with each other.
+# or fail with the reason in PROBE_ERR. The apply path uses one SQLite
+# connection; the default dry-run path uses the bounded observation below.
+# A default dry run observes only a stable 100-byte SQLite file header. Opening
+# even a SQLITE_OPEN_READONLY WAL database can create sidecars on Linux. No
+# immutable=1 promise is made about the live file, and no SQLite connection is
+# opened by this observational path. A journal or identity/header change refuses;
+# this is not a transaction, writer-exclusion proof, or permission to compact.
+# GNU stat retains subsecond timestamps; BSD stat below exposes seconds.
+# File identity and repeated header bytes are checked separately on both hosts.
+file_fingerprint() {
+  if stat -L -c '%d:%i:%s:%y:%z' "$1" >/dev/null 2>&1; then
+    stat -L -c '%d:%i:%s:%y:%z' "$1"
+  else
+    stat -L -f '%d:%i:%z:%m:%c' "$1"
+  fi
+}
+probe_header_counters() {
+  local before after first second size page free journal value
+  local -a octets
+  if [ -e "${DB_PATH}-wal" ] || [ -e "${DB_PATH}-journal" ]; then
+    echo 'error: dry-run header observation unavailable while a WAL or rollback journal is present; no SQLite connection was opened.' >&2
+    return 1
+  fi
+  before="$(file_fingerprint "${DB_PATH}")" || return 1
+  first="$(od -An -v -tu1 -N100 "${DB_PATH}" | tr '\n' ' ')" || return 1
+  second="$(od -An -v -tu1 -N100 "${DB_PATH}" | tr '\n' ' ')" || return 1
+  after="$(file_fingerprint "${DB_PATH}")" || return 1
+  if [ "$before" != "$after" ] || [ "$first" != "$second" ] ||
+     [ -e "${DB_PATH}-wal" ] || [ -e "${DB_PATH}-journal" ]; then
+    echo 'error: database identity/header or journal state changed during dry-run observation; no counters are reported.' >&2
+    return 1
+  fi
+  read -r -a octets <<< "$first"
+  if [ "${#octets[@]}" -ne 100 ] ||
+     [ "$(printf '%s ' "${octets[@]:0:16}")" != '83 81 76 105 116 101 32 102 111 114 109 97 116 32 51 0 ' ]; then
+    echo 'error: dry-run observation requires a complete SQLite format-3 header.' >&2
+    return 1
+  fi
+  for value in "${octets[@]}"; do
+    case "$value" in ''|*[!0-9]*) return 1 ;; esac
+    [ "$value" -le 255 ] || return 1
+  done
+  page=$(( octets[16] * 256 + octets[17] ))
+  [ "$page" -ne 1 ] || page=65536
+  free=$(( octets[36] * 16777216 + octets[37] * 65536 + octets[38] * 256 + octets[39] ))
+  size="$(printf '%s\n' "$before" | cut -d: -f3)"
+  case "$size" in ''|*[!0-9]*) return 1 ;; esac
+  if [ "$page" -lt 512 ] || [ "$page" -gt 65536 ] || [ $((page & (page - 1))) -ne 0 ] ||
+     [ "$size" -lt "$page" ] || [ $((size % page)) -ne 0 ] || [ "$free" -ge $((size / page)) ] ||
+     [ "${octets[18]}" != "${octets[19]}" ]; then
+    echo 'error: inconsistent SQLite header counters; no compaction advice is inferred.' >&2
+    return 1
+  fi
+  case "${octets[18]}" in 1) journal=delete ;; 2) journal=wal ;; *) return 1 ;; esac
+  printf '%s %s %s header-observation\n' "$page" "$free" "$journal"
+}
+
 PROBE_ERR=""
 probe_counters() {
   local out
+  if [ "${APPLY}" != "1" ]; then
+    probe_header_counters
+    return $?
+  fi
   if out="$(sqlite3 -readonly "${DB_PATH}" 'PRAGMA page_size; PRAGMA freelist_count; PRAGMA journal_mode;' 2>&1)"; then
     printf '%s %s %s read-only\n' \
       "$(printf '%s\n' "${out}" | sed -n 1p)" \
@@ -278,6 +337,10 @@ echo "wal sidecar:   $(human "${WAL_BYTES}")"
 echo "journal mode:  ${JOURNAL}"
 echo "free pages:    ${FREE_PAGES} x ${PAGE_SIZE}B = $(human "${FREE_BYTES}") of unreachable old content (read ${PROBE_HOW})"
 echo
+if [ "${PROBE_HOW}" = "header-observation" ]; then
+  echo "header note:   bounded file-header observation, not a transaction or proof that no writer exists."
+  echo
+fi
 
 # Free space, on the filesystem holding the database. VACUUM writes the rebuilt
 # database before it drops the original, so the peak requirement is about twice

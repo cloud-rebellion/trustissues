@@ -1,4 +1,4 @@
-# CI for the public repo (github.com/bright-interaction/trustissues).
+# CI for the public repo (github.com/cloud-rebellion/trustissues).
 #
 # THIS FILE IS DELIBERATELY THIN. Every actual check lives in scripts/ci.sh, which you
 # can run yourself:
@@ -51,7 +51,7 @@ jobs:
           # newest 1.26.x happened to be that morning and never once looked
           # at the toolchain line below it. Keep in lockstep with the
           # Dockerfile's FROM tag and go.mod's toolchain directive.
-          go-version: "1.26.6"
+          go-version: "1.26.10"
           cache: true
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
@@ -67,7 +67,7 @@ jobs:
           # so any drift between them is at least stationary and visible in a
           # diff rather than moving underneath both. A buildpins-style lockstep
           # guard for bun is the real fix and does not exist yet.
-          bun-version: "1.4.0"
+          bun-version: "1.4.4"
 
       - name: All checks (build, vet, gofmt, migrations, tests, frontend, secrets, vulnerabilities)
         run: bash scripts/ci.sh
