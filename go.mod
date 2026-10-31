@@ -1,8 +1,8 @@
 module github.com/bright-interaction/trustissues
 
 // Keep the module floor, Docker builder and public CI compiler in lockstep.
-// Go 1.26.9 fixes the October 2026 standard-library advisories.
-go 1.26.9
+// Go 1.26.10 fixes the October 2026 standard-library advisories.
+go 1.26.10
 
 require (
 	github.com/getsentry/sentry-go v0.47.0
