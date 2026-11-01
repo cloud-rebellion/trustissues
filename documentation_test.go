@@ -111,7 +111,7 @@ func TestEveryAllowedFileIsEmbeddedAndHasKnownMediaType(t *testing.T) {
 		if mediaType != "markdown" && mediaType != "image/png" && mediaType != "application/json" {
 			t.Errorf("unknown media type for %s: %q", name, mediaType)
 		}
-		if content, err := files.ReadFile(name); err != nil || len(content) == 0 {
+		if content, err := readDocumentationFile(name); err != nil || len(content) == 0 {
 			t.Errorf("allowlisted file %s is missing or empty: %v", name, err)
 		}
 	}

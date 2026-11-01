@@ -21,6 +21,11 @@ import (
 // The fixture contains no vault tables: reading documentation must not require
 // loading, unlocking, or changing a credential.
 func TestDocumentationRouterAuthRolesAndEnrollment(t *testing.T) {
+	testDocumentationRouterAuthRolesAndEnrollment(t, "/api/documentation/docs/USER-GUIDE.md", "# TrustIssues user guide")
+}
+
+func testDocumentationRouterAuthRolesAndEnrollment(t *testing.T, guidePath, expectedPrefix string) {
+	t.Helper()
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +51,6 @@ func TestDocumentationRouterAuthRolesAndEnrollment(t *testing.T) {
 		dbConn:     db,
 		apiLimiter: timw.NewRateLimiter(1000, time.Minute),
 	})
-	const guidePath = "/api/documentation/docs/USER-GUIDE.md"
 	request := func(path string, headers map[string]string) *httptest.ResponseRecorder {
 		t.Helper()
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -95,7 +99,7 @@ func TestDocumentationRouterAuthRolesAndEnrollment(t *testing.T) {
 					var response struct {
 						Content string `json:"content"`
 					}
-					if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil || !strings.HasPrefix(response.Content, "# TrustIssues user guide") {
+					if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil || !strings.HasPrefix(response.Content, expectedPrefix) {
 						t.Fatalf("documentation response was not canonical guide JSON: err=%v", err)
 					}
 					if rec.Header().Get("Cache-Control") != "no-store" {

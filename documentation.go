@@ -14,8 +14,12 @@ import (
 // in-application documentation. Embedding them also means the runtime image does
 // not need a separate documentation directory or an extra Docker COPY step.
 //
-//go:embed docs/*.md docs/screenshots/user-guide/*.png docs/screenshots/user-guide/README.md docs/screenshots/user-guide/manifest.json README.md SECURITY.md THREAT-MODEL.md CONTRACT.md FRONTEND-CONTRACT.md CONTRIBUTING.md DEFERRED.md
+//go:embed docs/*.md docs/screenshots/user-guide/*.png docs/screenshots/user-guide/README.md docs/screenshots/user-guide/manifest.json README.md SECURITY.md CONTRACT.md FRONTEND-CONTRACT.md CONTRIBUTING.md
 var files embed.FS
+
+// The canonical private build may register separately embedded documents during
+// package initialization. The public build reads only its reviewed embed set.
+var readDocumentationFile = files.ReadFile
 
 // allowedFiles is deliberately narrower than the embedded filesystem. Adding an
 // unrelated Markdown file or screenshot to the repository must not publish it
@@ -32,11 +36,9 @@ var allowedFiles = map[string]string{
 	"docs/ADMIN-LOCKOUT-RECOVERY.md":                           "markdown",
 	"README.md":                                                "markdown",
 	"SECURITY.md":                                              "markdown",
-	"THREAT-MODEL.md":                                          "markdown",
 	"CONTRACT.md":                                              "markdown",
 	"FRONTEND-CONTRACT.md":                                     "markdown",
 	"CONTRIBUTING.md":                                          "markdown",
-	"DEFERRED.md":                                              "markdown",
 	"docs/screenshots/user-guide/README.md":                    "markdown",
 	"docs/screenshots/user-guide/manifest.json":                "application/json",
 	"docs/screenshots/user-guide/01-first-run.png":             "image/png",
@@ -79,7 +81,7 @@ func Handler() http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		content, err := files.ReadFile(name)
+		content, err := readDocumentationFile(name)
 		if err != nil {
 			http.Error(w, "documentation unavailable", http.StatusInternalServerError)
 			return
