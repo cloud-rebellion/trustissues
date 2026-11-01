@@ -50,6 +50,45 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 fail=0
 
+# The guard tests tracked source, not dependencies or generated build output.
+# CI builds the frontend before invoking us. Snapshot CURRENT tracked bytes so
+# that ignored bundles cannot contaminate the baseline and local tracked edits
+# are still tested. All planting/restoration happens only in this owned tree.
+# Keep the separate authoritative history scan in scripts/ci.sh unchanged.
+GITLEAKS="$(python3 - "$GITLEAKS" <<'PY_SNAPSHOT_BIN'
+import os, shutil, sys
+print(os.path.abspath(shutil.which(sys.argv[1])))
+PY_SNAPSHOT_BIN
+)"
+python3 - "$PWD" "$WORK/source" <<'PY_SNAPSHOT'
+import os, pathlib, subprocess, sys
+
+root, target = map(pathlib.Path, sys.argv[1:])
+paths = subprocess.run(["git", "ls-files", "-z", "--", "."], cwd=root,
+                       check=True, stdout=subprocess.PIPE).stdout.split(b"\0")
+paths = [pathlib.Path(os.fsdecode(p)) for p in paths if p]
+if not paths or pathlib.Path(".gitleaks.toml") not in paths:
+    raise SystemExit("FAIL: tracked source/config could not be established")
+for relative in paths:
+    if relative.is_absolute() or ".." in relative.parts:
+        raise SystemExit("FAIL: invalid tracked source path")
+    source = root / relative
+    if any((root / parent).is_symlink() for parent in relative.parents):
+        raise SystemExit("FAIL: tracked source traverses a symlink directory")
+    if source.is_symlink():
+        # Git stores the link text; never follow it into another source tree.
+        content = os.fsencode(os.readlink(source))
+    elif source.is_file():
+        content = source.read_bytes()
+    else:
+        raise SystemExit("FAIL: tracked source is missing or not a regular file")
+    destination = target / relative
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(content)
+print(f"ok: isolated {len(paths)} current tracked source file(s)")
+PY_SNAPSHOT
+cd "$WORK/source"
+
 # ── 1. structural: the config must not exempt anything BY PATH ───────────────
 #
 # Parsed, not grepped. tomllib resolves quoted keys, dotted keys and nested
